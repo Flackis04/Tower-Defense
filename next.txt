@@ -1,0 +1,39 @@
+#penny, henry, lovisa, henry blöja
+#red hiteffekt, becomes multiple after takedown
+#level text
+#program/ui
+#incoming henry stepping on the enemies
+#windback
+#Upgrade defenses
+#start, pause button, settings
+
+# add constant S-curves
+# add buildings that the enemies can take down.
+# add currency
+# ... (previous code remains unchanged)
+
+#circle coming from end
+
+#shopping cart logo maybe
+#if game active then hide
+#buy sounds, game sounds
+Rainbow circle that gives scary leel sound
+normala och onormala fiender
+
+#setting: toggle auto buy_menu (for every round start)
+toggle auto release when buying
+
+# SELF = referencing the class, = so BUY NOW
+
+fix naming, organizing and shortening
+fix margins etc to be % or smthn
+
+Lifehack: where the error is, locate that place's code.
+if I notice myself reading text over and over again, think about where the problem lies instead, which in turn leads to the lifehack.
+
+Inconsistencies can be fixed later with ai.
+
+self.placed_defenses.append(self.dragging_item) inför när det går sönder så pop
+
+Problems:
+if not enough money to afford object: make entire screen red with transparancy 80% for 0.5 seconds while transparancy gets higher and higher until it becomes 100% when it reaches 0.5 seconds
