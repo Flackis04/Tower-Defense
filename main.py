@@ -34,6 +34,9 @@ enemy_spawner = spawner.EnemySpawner(screen, path_points, cumulative_lengths)
 player_hp = 50
 game_over = False
 
+# Create a font for the HP display (using a smaller font size than the balance)
+hp_font = pygame.font.Font(None, 24)
+
 def circle_rect_collision(circle_center, circle_radius, rect):
     cx, cy = circle_center
     nearest_x = max(rect.left, min(cx, rect.right))
@@ -75,10 +78,9 @@ while running:
     path_polygon = path.get_path_polygon(path_points, 25)
     pygame.draw.polygon(screen, constants.color_theme, path_polygon)
 
-    # Create lists to track enemies and defenses to remove during collisions.
     enemies_to_remove = []
     defenses_to_remove = []
-    
+
     # Collision detection between enemies and placed defenses.
     for enemy in enemies_list:
         enemy_center = (enemy.posx, enemy.posy)
@@ -92,7 +94,7 @@ while running:
                     economy.balance += enemy.reward
                 if defense.hp <= 0:
                     defenses_to_remove.append(defense)
-    
+
     # Remove defeated enemies and destroyed defenses.
     for enemy in enemies_to_remove:
         if enemy in enemies_list:
@@ -100,7 +102,7 @@ while running:
     for defense in defenses_to_remove:
         if defense in market_instance.placed_defenses:
             market_instance.placed_defenses.remove(defense)
-    
+
     # Check for enemy escapes – if an enemy has reached or exceeded the end of the path,
     # subtract its "damage" from the player's HP (here, enemy.tier * 5) and remove it.
     enemies_escaped = []
@@ -110,32 +112,36 @@ while running:
     for enemy in enemies_escaped:
         player_hp -= enemy.tier * 5  # adjust damage cost as desired
         enemies_list.remove(enemy)
-    
+
     if player_hp <= 0:
         game_over = True
         running = False  # end the main game loop and transition to the game over state
-    
+
     # Update and draw all enemies.
     for enemy in enemies_list:
         enemy.update(path_points, cumulative_lengths)
         enemy.draw()
-    
+
     # Draw any placed defenses.
     market_instance.draw_defenses(screen)
-    
+
     if market_is_active:
         market_instance.draw(screen, cached_mouse_pos)
-    
+
     if market_btn_is_active:
         market_btn.draw(screen)
-    
+
     flash = get_flash_instance()
     flash.update()
     flash.draw()
-    
+
     balance_display.update()
     balance_display.draw()
-    
+
+    # Draw player's HP below the balance text in a smaller font.
+    hp_text = hp_font.render(f"HP: {player_hp}", True, (255, 255, 255))
+    screen.blit(hp_text, (10, 50))
+
     pygame.display.flip()
 
 # Game Over state: Show a blurred screen with GAME OVER text in the middle.
@@ -149,12 +155,12 @@ if game_over:
         blurred = pygame.transform.smoothscale(screen, (width // 10, height // 10))
         blurred = pygame.transform.smoothscale(blurred, (width, height))
         screen.blit(blurred, (0, 0))
-        
+
         font = pygame.font.SysFont(None, 72)
         game_over_text = font.render("GAME OVER", True, (255, 0, 0))
         text_rect = game_over_text.get_rect(center=(width // 2, height // 2))
         screen.blit(game_over_text, text_rect)
-        
+
         pygame.display.flip()
         clock.tick(60)
 
