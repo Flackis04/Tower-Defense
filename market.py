@@ -132,6 +132,9 @@ class Market:
         # New attribute to debounce the small pin button
         self.pin_btn_pressed = False
 
+        # Add the market_is_opened boolean.
+        self.market_is_opened = False
+
         # Set up an inventory for the market's containers.
         # Assuming we have 5 rows x 2 columns (10 containers); you can adjust the logic here.
         self.num_cols = 2
@@ -195,6 +198,10 @@ class Market:
                     container_id += 1
 
         # --- End Improved Inventory System ---
+
+        # Load the cannon images and store them as attributes of the Market object
+        self.cannon_base = pygame.transform.scale(pygame.image.load("img/cannon/base.png").convert_alpha(), (int(pygame.image.load("img/cannon/base.png").get_width() * 1.5), int(pygame.image.load("img/cannon/base.png").get_height() * 1.5)))
+        self.cannon_pipe = pygame.transform.scale(pygame.image.load("img/cannon/pipe.png").convert_alpha(), (int(pygame.image.load("img/cannon/pipe.png").get_width() * 1.5), int(pygame.image.load("img/cannon/pipe.png").get_height() * 1.5)))
 
     def get_container_rect(self, container_index):
         """
@@ -311,7 +318,7 @@ class Market:
             B = self.path_points[i + 1]
             # Calculate the midpoint of the segment.
             midpoint = ((A[0] + B[0]) / 2, (A[1] + B[1]) / 2)
-            #remember this!
+            #remember this!!!
             d = math.hypot(point[0] - midpoint[0], point[1] - midpoint[1])
         if d < min_dist:
             min_dist = d
@@ -339,55 +346,44 @@ class Market:
         return False
 
     def update(self, events):
-        # Check for clicks in containers for drag-and-drop functionality.
+        # Process drag-and-drop events only when the market is open.
         for event in events:
-            if self.drag_drop_enabled:
+            if self.drag_drop_enabled and self.market_is_opened:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    # Iterate through all 10 containers.
+                    # Iterate through all containers.
                     for container in self.containers_all:
                         container_rect = self.get_container_rect(container.id)
                         if container_rect.collidepoint(event.pos) and container.defense is None:
-                            print(f"Clicked container: {container.id}")
-                            # In this example, container 0 holds the Blöja defense.
-                            if container.id == 0:
-                                self.dragging_item = defenses.Blöja(self.screen, self, (255, 0, 255))
-                                # Set drag_offset so the object's center aligns with the cursor.
+                            # Instantiate the appropriate defense based on the focused category.
+                            if self.focused_btn == self.category_btns[0]:
+                                # Category 0 corresponds to Cannon defense.
+                                self.dragging_item = defenses.Cannon(self.screen, self, (0, 0, 255))
                                 self.drag_offset = (0, 0)
-                                print("Dragging Blöja initiated.")
-                            else:
-                                print("Clicked container does not hold a draggable item.")
+                            elif self.focused_btn == self.category_btns[2]:
+                                # Category 2 corresponds to Blöja defense.
+                                self.dragging_item = defenses.Blöja(self.screen, self, (255, 0, 255))
+                                self.drag_offset = (0, 0)
                             break
-                        else:
-                            container_rect = self.get_container_rect(0)
-                            if container_rect.collidepoint(event.pos) and self.focused_btn == self.category_btns[2] and self.category_index == 2 and container.id == 0:
-                                flash = get_flash_instance()
-                                flash.trigger()
                 elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                     if self.dragging_item:
                         drop_point = event.pos
-                        # Determine nearby path orientation and set angle accordingly.
                         orientation, continuous = self.get_continuous_path_orientation(drop_point)
                         self.dragging_item.angle = 90 if orientation == "vertical" else 0
-                        # Use improved placement logic.
                         if self.is_placeable(drop_point, self.dragging_item):
                             snapped_point = self.snap_point_to_path(drop_point)
-                            # If snapping succeeds, use that; otherwise fallback to the drop point.
                             final_point = snapped_point if snapped_point is not None else drop_point
                             self.dragging_item.pos = final_point
                             self.placed_defenses.append(self.dragging_item)
-                            # Subtract defense cost from the balance once it is placed.
                             economy.balance -= self.dragging_item.cost
-                            print("Placed defense at:", self.dragging_item.pos)
-                        else:
-                            print("Release position is not valid. Defense not placed.")
-                    flash = get_invalid_placement_flash_instance()
-                    flash.stop()
-                    self.dragging_item = None
+                        flash = get_flash_instance()
+                        flash.trigger()
+                        self.dragging_item = None
 
-        # Existing category button update.
+        # Update category buttons and market open state.
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.rect.collidepoint(event.pos):
+                    self.market_is_opened = True
                     for btn in self.category_btns:
                         if btn.rect.collidepoint(event.pos):
                             if self.focused_btn and self.focused_btn != btn:
@@ -395,12 +391,11 @@ class Market:
                             self.focused_btn = btn
                             self.focused_btn.current_color = self.focus_color
                             self.category_index = self.category_btns.index(btn)
-                            
                             break
                 else:
                     if not self.market_is_pinned:
+                        self.market_is_opened = False
                         return True
-                    
         return False
 
     def draw(self, screen, cached_mouse_pos):
@@ -480,6 +475,15 @@ class Market:
             else:
                 self.pin_btn_pressed = False
             self.pin_btn.current_color = (255, 255, 255) if self.market_is_pinned else (150, 150, 150)
+
+        if self.focused_btn == self.category_btns[0]:
+            center = self.get_container_center(0)
+            # Get a rectangle for each image centered at that location
+            base_rect = self.cannon_base.get_rect(center=center)
+            pipe_rect = self.cannon_pipe.get_rect(center=center)
+            # Blit the cannon base and pipe images at the calculated positions
+            screen.blit(self.cannon_base, base_rect)
+            screen.blit(self.cannon_pipe, pipe_rect)
 
     def draw_defenses(self, screen):
         """
