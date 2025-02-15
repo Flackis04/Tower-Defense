@@ -110,7 +110,7 @@ class Market:
         if self.category_btns:
             self.focused_btn = self.category_btns[0]
             self.focused_btn.current_color = self.focus_color
-            self.market_page = 0
+            self.category_index_ = 0
 
         # For drag-and-drop functionality:
         self.drag_drop_enabled = config.DRAG_DROP_ENABLED  # use configuration value
@@ -124,10 +124,15 @@ class Market:
 
         # Set up an inventory for the market's containers.
         # Assuming we have 5 rows x 2 columns (10 containers); you can adjust the logic here.
+        self.num_cols = 2
+        self.num_rows = 5
+        self.gap = 5
+        self.container_size = 70
+        
         self.inventory = [False] * 10  
-        # For demonstration purposes, assume container 0 and container 3 have an item.
-        self.inventory[0] = True
-        self.inventory[3] = True
+        self.all_container_indices = [(r, c) for r in range(self.num_rows) for c in range(self.num_cols)]
+        self.chunk_size = len(self.all_container_indices) // (len(self.category_btns)-1)  # Determine how many elements per sublist
+        self.container_index = [self.all_container_indices[i * self.chunk_size: (i + 1) * self.chunk_size] for i in range(3)]        
 
         # Load the small icon image for items.
         # Make sure that the image file exists in the specified path.
@@ -157,23 +162,19 @@ class Market:
     def get_container_rect(self, container_index):
         """
         Returns the pygame.Rect for the container specified by its index (0-9).
-        """
-        num_cols = 2
-        num_rows = 5
-        gap = 5
-        container_size = 70  # fixed container size
+        """  # fixed container size
 
-        grid_width = num_cols * container_size + (num_cols + 1) * gap
-        grid_height = num_rows * container_size + (num_rows + 1) * gap
+        grid_width = self.num_cols * self.container_size + (self.num_cols + 1) * self.gap
+        grid_height = self.num_rows * self.container_size + (self.num_rows + 1) * self.gap
         vertical_offset = 20  # Move the grid 20 pixels lower
         start_x = self.rect.x + (self.rect.width - grid_width) // 2
         start_y = self.rect.y + (self.rect.height - grid_height) // 2 + vertical_offset
 
-        row = container_index // num_cols
-        col = container_index % num_cols
-        container_x = start_x + gap + col * (container_size + gap)
-        container_y = start_y + gap + row * (container_size + gap)
-        return pygame.Rect(container_x, container_y, container_size, container_size)
+        row = self.container_index[container_index] // self.num_cols
+        col = self.container_index[container_index] % self.num_cols
+        container_x = start_x + self.gap + col * (self.container_size + self.gap)
+        container_y = start_y + self.gap + row * (self.container_size + self.gap)
+        return pygame.Rect(container_x, container_y, self.container_size, self.container_size)
 
     def get_container_center(self, container_index):
         """
@@ -321,7 +322,7 @@ class Market:
                             break
                         else:
                             container_rect = self.get_container_rect(0)
-                            if container_rect.collidepoint(event.pos) and self.focused_btn == self.category_btns[2] and self.market_page == 2 and container_index == 0:
+                            if container_rect.collidepoint(event.pos) and self.focused_btn == self.category_btns[2] and self.category_index == 2 and container_index == 0:
                                 flash = get_flash_instance()
                                 flash.trigger()
                 elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -356,7 +357,8 @@ class Market:
                                 self.focused_btn.current_color = self.non_focus_color
                             self.focused_btn = btn
                             self.focused_btn.current_color = self.focus_color
-                            self.market_page = self.category_btns.index(btn)
+                            self.category_index = self.category_btns.index(btn)
+                            
                             break
                 else:
                     if not self.market_is_pinned:
@@ -386,26 +388,6 @@ class Market:
                 y = start_y + gap + row * (container_size + gap)
                 container_rect = pygame.Rect(x, y, container_size, container_size)
                 pygame.draw.rect(screen, (15, 15, 15), container_rect, border_radius=3)
-
-                # Calculate the container index (assuming row-major order).
-                container_index = row * num_cols + col
-                if self.inventory[container_index]:
-                    # Define the upgrade button dimensions and position.
-                    upgrade_button_width = 20
-                    upgrade_button_height = 20
-                    button_padding = 2
-                    button_x = x + container_size - upgrade_button_width - button_padding
-                    button_y = y + container_size - upgrade_button_height - button_padding
-                    upgrade_button_rect = pygame.Rect(button_x, button_y, upgrade_button_width, upgrade_button_height)
-                    
-                    # Draw a green rounded rectangle as the upgrade button.
-                    pygame.draw.rect(screen, (50, 205, 50), upgrade_button_rect, border_radius=5)
-                    
-                    # Center the white arrow onto the upgrade button.
-                    arrow_width, arrow_height = self.item_icon.get_size()
-                    arrow_x = button_x + (upgrade_button_width - arrow_width) // 2
-                    arrow_y = button_y + (upgrade_button_height - arrow_height) // 2
-                    screen.blit(self.item_icon, (arrow_x, arrow_y))
 
         for btn in self.category_btns:
             btn.draw(screen)
@@ -473,3 +455,37 @@ class Market:
 
 def make_market(screen, width=175, height=450):
     return Market(screen, width=width, height=height)
+
+class UpgradeButton:
+    def __init__(self, x, y, width, height, container_index):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.color = (50, 205, 50)
+        self.hover_color = (70, 225, 70)
+
+    def draw(self, screen):    # Calculate the container index (assuming row-major order).
+        container_index = Market.row * Market.num_cols + Market.col
+        if self.inventory[container_index]:
+            # Define the upgrade button dimensions and position.
+            upgrade_button_width = 20
+            upgrade_button_height = 20
+            upgrade_button_color = (50, 205, 50)
+            button_padding = 2
+            button_x = Market.rect.x + Market.container_size - upgrade_button_width - button_padding
+            button_y = Market.rect.y + Market.container_size - upgrade_button_height - button_padding
+            upgrade_button_rect = pygame.Rect(button_x, button_y, upgrade_button_width, upgrade_button_height)
+            
+            # Draw a green rounded rectangle as the upgrade button.
+            pygame.draw.rect(screen, (upgrade_button_color), upgrade_button_rect, border_radius=5)
+            if Market.cached_mouse_pos.collidepoint(upgrade_button_rect):
+                current_upgrade_button_color[container_index] = (70, 225, 70)
+                if pygame.mouse.get_pressed()[0]:
+                    self.current_upgrades[container_index] += 1
+                    print(f"Upgraded container {container_index} to level {self.current_upgrades[container_index]}")
+            # Draw a white upward arrow on the upgrade button.
+            arrow_points = [
+                (button_x + upgrade_button_width // 2, button_y + 4),
+                (button_x + 4, button_y + upgrade_button_height - 4),
+                (button_x + upgrade_button_width - 4, button_y + upgrade_button_height - 4)
+            ]
+            pygame.draw.polygon(screen, (255, 255, 255), arrow_points)
+
