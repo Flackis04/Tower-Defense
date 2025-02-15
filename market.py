@@ -346,38 +346,54 @@ class Market:
         return False
 
     def update(self, events):
-        # Process drag-and-drop events only when the market is open.
         for event in events:
-            if self.drag_drop_enabled and self.market_is_opened:
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    # Iterate through all containers.
+            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # If the click is inside the market
+                if self.rect.collidepoint(event.pos):
+                    # Open the market if it's not already open.
+                    if not self.market_is_opened:
+                        self.market_is_opened = True
+
+                    # Immediately check containers for a defense drag initiation.
                     for container in self.containers_all:
                         container_rect = self.get_container_rect(container.id)
                         if container_rect.collidepoint(event.pos) and container.defense is None:
-                            # Instantiate the appropriate defense based on the focused category.
+                            # Check which defense is being clicked based on the active category button
                             if self.focused_btn == self.category_btns[0]:
-                                # Category 0 corresponds to Cannon defense.
-                                self.dragging_item = defenses.Cannon(self.screen, self, (0, 0, 255))
-                                self.drag_offset = (0, 0)
+                                # For Cannon (cost: 1000)
+                                if economy.balance >= 1000:
+                                    self.dragging_item = defenses.Cannon(self.screen, self, (0, 0, 255))
+                                else:
+                                    flash = get_flash_instance()
+                                    flash.trigger()
                             elif self.focused_btn == self.category_btns[2]:
-                                # Category 2 corresponds to Blöja defense.
-                                self.dragging_item = defenses.Blöja(self.screen, self, (255, 0, 255))
-                                self.drag_offset = (0, 0)
+                                # For Blöja (cost: 500)
+                                if economy.balance >= 500:
+                                    self.dragging_item = defenses.Blöja(self.screen, self, (255, 0, 255))
+                                else:
+                                    flash = get_flash_instance()
+                                    flash.trigger()
                             break
-                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                    if self.dragging_item:
-                        drop_point = event.pos
-                        orientation, continuous = self.get_continuous_path_orientation(drop_point)
-                        self.dragging_item.angle = 90 if orientation == "vertical" else 0
-                        if self.is_placeable(drop_point, self.dragging_item):
-                            snapped_point = self.snap_point_to_path(drop_point)
-                            final_point = snapped_point if snapped_point is not None else drop_point
-                            self.dragging_item.pos = final_point
-                            self.placed_defenses.append(self.dragging_item)
-                            economy.balance -= self.dragging_item.cost
-                        flash = get_flash_instance()
-                        flash.trigger()
-                        self.dragging_item = None
+                else:
+                    # If clicked outside and the market is not pinned, close the market.
+                    if not self.market_is_pinned:
+                        self.market_is_opened = False
+                        return True
+
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if self.dragging_item:
+                    drop_point = event.pos
+                    orientation, continuous = self.get_continuous_path_orientation(drop_point)
+                    self.dragging_item.angle = 90 if orientation == "vertical" else 0
+                    if self.is_placeable(drop_point, self.dragging_item):
+                        snapped_point = self.snap_point_to_path(drop_point)
+                        final_point = snapped_point if snapped_point is not None else drop_point
+                        self.dragging_item.pos = final_point
+                        self.placed_defenses.append(self.dragging_item)
+                        economy.balance -= self.dragging_item.cost
+                    flash = get_invalid_placement_flash_instance()
+                    flash.stop()
+                    self.dragging_item = None
 
         # Update category buttons and market open state.
         for event in events:
