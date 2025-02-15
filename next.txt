@@ -35,5 +35,4 @@ Inconsistencies can be fixed later with ai.
 
 self.placed_defenses.append(self.dragging_item) inför när det går sönder så pop
 
-Problems:
-if not enough money to afford object: make entire screen red with transparancy 80% for 0.5 seconds while transparancy gets higher and higher until it becomes 100% when it reaches 0.5 seconds
+An ID is a unique identifier that helps distinguish individual items in a large collection

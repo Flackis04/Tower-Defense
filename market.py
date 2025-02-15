@@ -58,6 +58,16 @@ def make_market_btn(screen, button_width=100, button_height=40, margin=10):
     return MarketButton(x, margin, button_width, button_height)
 
 
+# --- New Container class for inventory management ---
+class Container:
+    def __init__(self, container_id, row, col, category):
+        self.id = container_id   # A unique ID for the container
+        self.row = row           # The grid row (0-indexed)
+        self.col = col           # The grid column (0-indexed)
+        self.category = category # Which category this container belongs to
+        self.defense = None      # Holds a defense instance when assigned
+
+
 class Market:
     def __init__(
         self,
@@ -110,7 +120,7 @@ class Market:
         if self.category_btns:
             self.focused_btn = self.category_btns[0]
             self.focused_btn.current_color = self.focus_color
-            self.category_index_ = 0
+            self.category_index = 0
 
         # For drag-and-drop functionality:
         self.drag_drop_enabled = config.DRAG_DROP_ENABLED  # use configuration value
@@ -159,19 +169,45 @@ class Market:
             hover_color=(180, 180, 180)
         )
 
+        # --- Improved Inventory System ---
+        self.num_cols = 2
+        self.num_rows = 5
+        self.gap = 5
+        self.container_size = 70
+
+        # Get grid positions for all containers (row, col tuples).
+        self.all_container_indices = [(r, c) for r in range(self.num_rows) for c in range(self.num_cols)]
+        num_categories = len(self.category_btns)
+        # Divide the total containers among categories (using ceiling division).
+        containers_per_category = math.ceil(len(self.all_container_indices) / num_categories)
+        self.containers_by_category = {}
+        self.containers_all = []
+        container_id = 0
+        for cat in range(num_categories):
+            self.containers_by_category[cat] = []
+            for i in range(containers_per_category):
+                idx = cat * containers_per_category + i
+                if idx < len(self.all_container_indices):
+                    row, col = self.all_container_indices[idx]
+                    container = Container(container_id, row, col, cat)
+                    self.containers_by_category[cat].append(container)
+                    self.containers_all.append(container)
+                    container_id += 1
+
+        # --- End Improved Inventory System ---
+
     def get_container_rect(self, container_index):
         """
         Returns the pygame.Rect for the container specified by its index (0-9).
-        """  # fixed container size
-
+        """
         grid_width = self.num_cols * self.container_size + (self.num_cols + 1) * self.gap
         grid_height = self.num_rows * self.container_size + (self.num_rows + 1) * self.gap
-        vertical_offset = 20  # Move the grid 20 pixels lower
+        vertical_offset = 20  # move the grid 20 pixels lower
         start_x = self.rect.x + (self.rect.width - grid_width) // 2
         start_y = self.rect.y + (self.rect.height - grid_height) // 2 + vertical_offset
 
-        row = self.container_index[container_index] // self.num_cols
-        col = self.container_index[container_index] % self.num_cols
+        row = container_index // self.num_cols
+        col = container_index % self.num_cols
         container_x = start_x + self.gap + col * (self.container_size + self.gap)
         container_y = start_y + self.gap + row * (self.container_size + self.gap)
         return pygame.Rect(container_x, container_y, self.container_size, self.container_size)
@@ -275,10 +311,11 @@ class Market:
             B = self.path_points[i + 1]
             # Calculate the midpoint of the segment.
             midpoint = ((A[0] + B[0]) / 2, (A[1] + B[1]) / 2)
+            #remember this!
             d = math.hypot(point[0] - midpoint[0], point[1] - midpoint[1])
-            if d < min_dist:
-                min_dist = d
-                best_midpoint = (int(midpoint[0]), int(midpoint[1]))
+        if d < min_dist:
+            min_dist = d
+            best_midpoint = (int(midpoint[0]), int(midpoint[1]))
         if min_dist <= snap_tolerance:
             return best_midpoint
         else:
@@ -307,12 +344,12 @@ class Market:
             if self.drag_drop_enabled:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     # Iterate through all 10 containers.
-                    for container_index in range(10):
-                        container_rect = self.get_container_rect(container_index)
-                        if container_rect.collidepoint(event.pos) and economy.balance >= defenses.Blöja(self.screen, self, (255, 0, 255)).cost:
-                            print(f"Clicked container: {container_index}")
+                    for container in self.containers_all:
+                        container_rect = self.get_container_rect(container.id)
+                        if container_rect.collidepoint(event.pos) and container.defense is None:
+                            print(f"Clicked container: {container.id}")
                             # In this example, container 0 holds the Blöja defense.
-                            if container_index == 0:
+                            if container.id == 0:
                                 self.dragging_item = defenses.Blöja(self.screen, self, (255, 0, 255))
                                 # Set drag_offset so the object's center aligns with the cursor.
                                 self.drag_offset = (0, 0)
@@ -322,7 +359,7 @@ class Market:
                             break
                         else:
                             container_rect = self.get_container_rect(0)
-                            if container_rect.collidepoint(event.pos) and self.focused_btn == self.category_btns[2] and self.category_index == 2 and container_index == 0:
+                            if container_rect.collidepoint(event.pos) and self.focused_btn == self.category_btns[2] and self.category_index == 2 and container.id == 0:
                                 flash = get_flash_instance()
                                 flash.trigger()
                 elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -456,7 +493,7 @@ class Market:
 def make_market(screen, width=175, height=450):
     return Market(screen, width=width, height=height)
 
-class UpgradeButton:
+#class UpgradeButton:
     def __init__(self, x, y, width, height, container_index):
         self.rect = pygame.Rect(x, y, width, height)
         self.color = (50, 205, 50)
