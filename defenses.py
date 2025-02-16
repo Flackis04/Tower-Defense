@@ -53,18 +53,14 @@ class Cannon(Defense):
     def __init__(self, screen, market, color, scope=200, hp=250, dmg=1, cost=1000, snapbox=35):
         super().__init__(screen, market, color, hp, dmg, cost, snapbox, width=48, height=48)
         self.scope = scope
-        # Create instance-specific images for the cannon's pipe and base.
         original_pipe = market.cannon_pipe_original.copy()
         pipe_width, pipe_height = original_pipe.get_size()
-        # Create a new transparent surface of the same size.
         offset_surface = pygame.Surface((pipe_width, pipe_height), pygame.SRCALPHA)
-        offset_surface.fill((0, 0, 0, 0))
-        # Blit the original image onto the new surface at (5, 0) to shift it 5 pixels to the right.
-        offset_surface.blit(original_pipe, (5, 0))
+        # IMPORTANT: blit the original pipe image onto the offset surface
+        offset_surface.blit(original_pipe, (0, 0))
         self.pipe_original = offset_surface.copy()
         self.pipe = self.pipe_original.copy()
         self.base = market.cannon_base  # optionally create a copy if needed
-        # New attribute to track if this cannon is selected (pressed on)
         self.selected = False
 
     def get_distance(self, pos1, pos2):
@@ -101,11 +97,11 @@ class Cannon(Defense):
         # Get the cannon's rectangle as drawn.
         canon_rect = self.get_rect()
         # Define the sell button dimensions.
-        button_width = canon_rect.width // 2
-        button_height = 20
+        button_width = canon_rect.width / 1.5
+        button_height = 15
         # Position it centered below the cannon with a small gap.
         button_x = canon_rect.centerx - button_width // 2
-        button_y = canon_rect.bottom + 5
+        button_y = canon_rect.bottom + 10
         return pygame.Rect(button_x, button_y, button_width, button_height)
     
     def handle_event(self, event, mouse_pos):
@@ -125,19 +121,19 @@ class Cannon(Defense):
                     if self in self.market.placed_defenses:
                         self.market.placed_defenses.remove(self)
     
-    def draw(self):
-        if self.pos is not None:
-            center = self.pos
-        else:
-            center = self.market.get_container_center(0)
+    def draw(self, center=None):
+        # If no center is provided, use self.pos if available, otherwise choose a default container center.
+        if center is None:
+            if self.pos is not None:
+                center = self.pos
+            else:
+                center = self.market.get_container_center(0)
         base_rect = self.base.get_rect(center=center)
         pipe_rect = self.pipe.get_rect(center=center)
         self.screen.blit(self.base, base_rect)
         self.screen.blit(self.pipe, pipe_rect)
-        # If this cannon is selected, display the sell button under it.
         if self.selected:
             sell_button_rect = self.get_sell_button_rect()
-            # Draw a red rectangle as the sell button background.
             pygame.draw.rect(self.screen, (200, 0, 0), sell_button_rect)
             sell_font = pygame.font.SysFont(None, 20)
             text_surface = sell_font.render("Sell", True, (255, 255, 255))

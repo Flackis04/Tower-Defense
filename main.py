@@ -91,18 +91,18 @@ while running:
                 defense.handle_event(event, cached_mouse_pos)
 
     # Collision detection between enemies and placed defenses.
-    for enemy in enemies_list:
-        enemy_center = (enemy.posx, enemy.posy)
-        for defense in market_instance.placed_defenses:
-            defense_rect = defense.get_rect()
-            if circle_rect_collision(enemy_center, enemy.radius, defense_rect):
-                enemy.hp -= defense.dmg
-                defense.hp -= 1
-                if enemy.hp <= 0:
-                    enemies_to_remove.append(enemy)
-                    economy.balance += enemy.reward
-                if defense.hp <= 0:
-                    defenses_to_remove.append(defense)
+        for enemy in enemies_list:
+            enemy_center = (enemy.posx, enemy.posy)
+            for defense in market_instance.placed_defenses:
+                defense_rect = defense.get_rect()
+                if circle_rect_collision(enemy_center, enemy.radius, defense_rect) and isinstance(defense, defenses.Blöja):
+                    enemy.hp -= defense.dmg
+                    defense.hp -= 1
+                    if enemy.hp <= 0:
+                        enemies_to_remove.append(enemy)
+                        economy.balance += enemy.reward
+                    if defense.hp <= 0:
+                        defenses_to_remove.append(defense)
 
     # Remove defeated enemies and destroyed defenses.
     for enemy in enemies_to_remove:
