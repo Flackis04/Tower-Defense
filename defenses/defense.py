@@ -31,11 +31,9 @@ class Defense:
         return pygame.Rect(x - w // 2, y - h // 2, w, h)
     
     def handle_event(self, event, mouse_pos):
-        # Get the cannon's area.
-        self.get_rect = self.get_rect()
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # If the cannon itself is clicked, toggle its selection.
-            if self.get_rect.collidepoint(mouse_pos):
+            if self.get_rect().collidepoint(mouse_pos):
                 self.selected = not self.selected
             # If already selected, check if the sell button was clicked.
             elif self.selected:
