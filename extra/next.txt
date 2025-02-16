@@ -36,3 +36,5 @@ Inconsistencies can be fixed later with ai.
 self.placed_defenses.append(self.dragging_item) inför när det går sönder så pop
 
 An ID is a unique identifier that helps distinguish individual items in a large collection
+
+blöja becomes smaller when on path

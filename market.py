@@ -1,11 +1,12 @@
 import pygame
-import defenses
+import defenses.cannon as cannon
 import constants
 import economy
 import effects
 import config  # configuration file for drag-and-drop settings
 import math
 import path  # used to generate the path points
+import defenses.bloja as bloja
 from effects import get_flash_instance, get_invalid_placement_flash_instance
 
 class MarketButton:
@@ -344,11 +345,11 @@ class Market:
             seg_start = self.path_points[i]
             seg_end = self.path_points[i + 1]
             if self.distance_to_segment(point, seg_start, seg_end) <= tolerance:
-                if isinstance(defense, defenses.Blöja):
+                if isinstance(defense, bloja.Blöja):
                     return True
                 else:
                     return False
-        if isinstance(defense, defenses.Blöja):
+        if isinstance(defense, bloja.Blöja):
             return False
         else:
             return True
@@ -370,14 +371,14 @@ class Market:
                             if self.focused_btn == self.category_btns[0]:
                                 # For Cannon (cost: 1000)
                                 if economy.balance >= 1000:
-                                    self.dragging_item = defenses.Cannon(self.screen, self, (0, 0, 255))
+                                    self.dragging_item = cannon.Cannon(self.screen, self, (0, 0, 255))
                                 else:
                                     flash = get_flash_instance()
                                     flash.trigger()
                             elif self.focused_btn == self.category_btns[2]:
                                 # For Blöja (cost: 500)
                                 if economy.balance >= 500:
-                                    self.dragging_item = defenses.Blöja(self.screen, self, (255, 0, 255))
+                                    self.dragging_item = bloja.Blöja(self.screen, self, (255, 0, 255))
                                 else:
                                     flash = get_flash_instance()
                                     flash.trigger()
@@ -449,31 +450,31 @@ class Market:
         for btn in self.category_btns:
             btn.draw(screen)
         if self.focused_btn == self.category_btns[2]:
-            blöja = defenses.Blöja(self.screen, self, (255, 0, 255))
+            blöja = bloja.Blöja(self.screen, self, (255, 0, 255))
             center = self.get_container_center(0)
             orientation, continuous = self.get_continuous_path_orientation(center)
             if orientation == "vertical":
                 blöja.angle = 90
-                width, height = 50, 20
+                width, height = 48, 20
             else:
                 blöja.angle = 0
-                width, height = 20, 50
+                width, height = 20, 48
             rect = pygame.Rect(center[0] - width // 2, center[1] - height // 2, width, height)
             if economy.balance >= blöja.cost:
                 pygame.draw.rect(screen, blöja.color, rect)
             else:
-                blöja = defenses.Blöja(self.screen, self, (55, 0, 55))
+                blöja = bloja.Blöja(self.screen, self, (55, 0, 55))
                 pygame.draw.rect(screen, blöja.color, rect)
 
         # If an item is being dragged (from a container), attach it to the cursor.
-        if isinstance(self.dragging_item, defenses.Blöja):
+        if isinstance(self.dragging_item, bloja.Blöja):
             mouse_x, mouse_y = cached_mouse_pos
             orientation, _ = self.get_continuous_path_orientation((mouse_x, mouse_y))
             self.dragging_item.angle = 90 if orientation == "vertical" else 0
             if self.dragging_item.angle == 90:
-                width, height = 50, 20
+                width, height = 48, 20
             else:
-                width, height = 20, 50
+                width, height = 20, 48
             drag_rect = pygame.Rect(mouse_x - width // 2, mouse_y - height // 2, width, height)
             pygame.draw.rect(screen, self.dragging_item.color, drag_rect)
 
@@ -485,7 +486,7 @@ class Market:
                 flash.stop()
 
             # If the defense being dragged is a Cannon, draw the cannon images instead of a rectangle
-        if isinstance(self.dragging_item, defenses.Cannon):
+        if isinstance(self.dragging_item, cannon.Cannon):
             mouse_x, mouse_y = cached_mouse_pos
             base_rect = self.cannon_base.get_rect(center=(mouse_x, mouse_y))
             pipe_rect = self.cannon_pipe.get_rect(center=(mouse_x, mouse_y))
