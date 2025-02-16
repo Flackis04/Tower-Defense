@@ -26,6 +26,9 @@ class Enemy:
     def get_start_position(self):
         _, height = self.screen.get_size()
         return (0 - self.radius, int(height * 0.125))
+    
+    def get_position(self):
+        return (self.posx, self.posy)
 
     def update(self, path_points, cumulative_lengths):
         # Increase the traveled distance by the enemy's speed factor.

@@ -202,6 +202,8 @@ class Market:
         # Load the cannon images and store them as attributes of the Market object
         self.cannon_base = pygame.transform.scale(pygame.image.load("img/cannon/base.png").convert_alpha(), (int(pygame.image.load("img/cannon/base.png").get_width() * 1.5), int(pygame.image.load("img/cannon/base.png").get_height() * 1.5)))
         self.cannon_pipe = pygame.transform.scale(pygame.image.load("img/cannon/pipe.png").convert_alpha(), (int(pygame.image.load("img/cannon/pipe.png").get_width() * 1.5), int(pygame.image.load("img/cannon/pipe.png").get_height() * 1.5)))
+        self.cannon_pipe_original = self.cannon_pipe.copy()
+
 
     def get_container_rect(self, container_index):
         """
@@ -342,8 +344,14 @@ class Market:
             seg_start = self.path_points[i]
             seg_end = self.path_points[i + 1]
             if self.distance_to_segment(point, seg_start, seg_end) <= tolerance:
-                return True
-        return False
+                if isinstance(defense, defenses.Blöja):
+                    return True
+                else:
+                    return False
+        if isinstance(defense, defenses.Blöja):
+            return False
+        else:
+            return True
 
     def update(self, events):
         for event in events:
@@ -383,6 +391,7 @@ class Market:
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.dragging_item:
                     drop_point = event.pos
+                    print("hejjjjj")
                     orientation, continuous = self.get_continuous_path_orientation(drop_point)
                     self.dragging_item.angle = 90 if orientation == "vertical" else 0
                     if self.is_placeable(drop_point, self.dragging_item):
@@ -457,7 +466,7 @@ class Market:
                 pygame.draw.rect(screen, blöja.color, rect)
 
         # If an item is being dragged (from a container), attach it to the cursor.
-        if self.dragging_item:
+        if isinstance(self.dragging_item, defenses.Blöja):
             mouse_x, mouse_y = cached_mouse_pos
             orientation, _ = self.get_continuous_path_orientation((mouse_x, mouse_y))
             self.dragging_item.angle = 90 if orientation == "vertical" else 0
@@ -468,7 +477,23 @@ class Market:
             drag_rect = pygame.Rect(mouse_x - width // 2, mouse_y - height // 2, width, height)
             pygame.draw.rect(screen, self.dragging_item.color, drag_rect)
 
-            # Draw a semi-transparent red circle if placement is not allowed.
+            if not self.is_placeable((mouse_x, mouse_y), self.dragging_item) and not self.rect.collidepoint(cached_mouse_pos):
+                flash = get_invalid_placement_flash_instance()
+                flash.trigger()
+            else:
+                flash = get_invalid_placement_flash_instance()
+                flash.stop()
+
+            # If the defense being dragged is a Cannon, draw the cannon images instead of a rectangle
+        if isinstance(self.dragging_item, defenses.Cannon):
+            mouse_x, mouse_y = cached_mouse_pos
+            base_rect = self.cannon_base.get_rect(center=(mouse_x, mouse_y))
+            pipe_rect = self.cannon_pipe.get_rect(center=(mouse_x, mouse_y))
+            screen.blit(self.cannon_base, base_rect)
+            screen.blit(self.cannon_pipe, pipe_rect)
+
+            ###if isinstace cannon
+
             if not self.is_placeable((mouse_x, mouse_y), self.dragging_item) and not self.rect.collidepoint(cached_mouse_pos):
                 flash = get_invalid_placement_flash_instance()
                 flash.trigger()

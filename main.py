@@ -21,6 +21,7 @@ enemies_list = []
 
 market_btn = market.make_market_btn(screen)
 market_instance = market.make_market(screen)
+market_instance.enemies_list = enemies_list
 balance_display = text.Balance_Display(screen)
 
 # Create a defense instance using market_instance
@@ -82,6 +83,12 @@ while running:
 
     enemies_to_remove = []
     defenses_to_remove = []
+
+    for defense in market_instance.placed_defenses:
+        if isinstance(defense, defenses.Cannon) and defense.pos is not None:
+            defense.aim_at_enemy()
+            for event in event_list:
+                defense.handle_event(event, cached_mouse_pos)
 
     # Collision detection between enemies and placed defenses.
     for enemy in enemies_list:
