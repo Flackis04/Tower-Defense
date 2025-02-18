@@ -3,7 +3,7 @@ import market
 import economy
 
 class Defense:
-    def __init__(self, screen, market, width, height, hp, dmg, cost, snapbox, type, scope):
+    def __init__(self, screen, market, width, height, hp, dmg, cost, snapbox, type, scope, hasfront):
         self.screen = screen
         self.market = market
         self.hp = hp
@@ -17,6 +17,8 @@ class Defense:
         self.type = type
         self.selected = False
         self.scope = scope
+        self.othertypes = [] #3rd category
+        self.hasfront = False
 
     def get_rect(self):
         if self.pos is not None:
@@ -65,3 +67,12 @@ class Defense:
             text_surface = sell_font.render("Sell", True, (255, 255, 255))
             text_rect = text_surface.get_rect(center=sell_button_rect.center)
             self.screen.blit(text_surface, text_rect)
+
+        if isinstance(self, Defense) and economy.balance >= self.cost:
+            self.draw()
+        else:
+            darkness_filter = self.copy()
+            dark_surface = pygame.Surface(darkness_filter.get_size(), pygame.SRCALPHA)
+            dark_surface.fill((0, 0, 0, 128))  # 50% transparent black
+            darkness_filter.blit(dark_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            self.screen.blit(darkness_filter, self.rect)

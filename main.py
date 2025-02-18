@@ -120,7 +120,7 @@ while running:
             enemies_escaped.append(enemy)
     for enemy in enemies_escaped:
         player_hp -= enemy.tier * 5  # adjust damage cost as desired
-        enemies_list.remove(enemy)
+        enemies_list.remove(enemy)           
 
     if player_hp <= 0:
         game_over = True

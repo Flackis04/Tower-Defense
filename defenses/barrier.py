@@ -2,8 +2,8 @@ import pygame
 import defenses.defense as defense
 
 class Barrier(defense.Defense):
-    def __init__(self, screen, market, width=50, height=50, hp=5, dmg=1, cost=500, snapbox=35, type="on_land"):
-        super().__init__(screen, market, width, height, hp, dmg, cost, snapbox, type, "on_land")
+    def __init__(self, screen, market, width=50, height=50, hp=5, dmg=1, cost=500, snapbox=35, type="on_land", hasfront=True):
+        super().__init__(screen, market, width, height, hp, dmg, cost, snapbox, type, "on_land", hasfront)
         self.isfront = False
         self.screen = screen
         self.barrier = pygame.image.load("assets/barrier/barrier.png").convert_alpha()
@@ -17,16 +17,7 @@ class Barrier(defense.Defense):
         offset_surface = pygame.Surface((barrier_width, barrier_height), pygame.SRCALPHA)
         offset_surface.blit(original_barrier, (0, 0))
         self.pos = None
-    def ondrag(self,screen, cached_mouse_pos):
-            mouse_x, mouse_y = cached_mouse_pos
-            orientation, _ = self.get_continuous_path_orientation((mouse_x, mouse_y))
-            self.angle = 90 if orientation == "vertical" else 0
-            if self.angle == 90:
-                width, height = self.height, self.width
-            else:
-                width, height = self.width, self.height
-            drag_rect = pygame.Rect(mouse_x - width // 2, mouse_y - height // 2, width, height)
-            pygame.draw.rect(screen, self.color, drag_rect)
+        self.market = market
 
     def draw(self):
         if hasattr(self, 'pos') and self.pos is not None:
@@ -38,4 +29,12 @@ class Barrier(defense.Defense):
                 self.rect = self.barrier.get_rect(center=self.pos)
                 self.screen.blit(self.barrier, self.rect)
 
-
+    def ondrag(self, screen):
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        self.orientation, _ = self.market.get_continuous_path_orientation((mouse_x, mouse_y))
+        self.angle = 90 if self.orientation == "vertical" else 0 
+        if self.orientation == "vertical":
+            self.market.defenselist[1].angle = 90
+        else:
+            self.market.defenselist[1].angle = 0
+        return self.market.defenselist[1].draw()

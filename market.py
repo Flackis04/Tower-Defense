@@ -7,6 +7,7 @@ import config  # configuration file for drag-and-drop settings
 import math
 import path  # used to generate the path points
 import defenses.barrier as barrier
+import defenses.defense as defense
 from effects import get_flash_instance, get_invalid_placement_flash_instance
 
 class MarketButton:
@@ -80,7 +81,6 @@ class Market:
         text="Items...",
         color=constants.color_theme,
         text_color=(255, 255, 255),
-        defense=None,
     ):
         if x is None:
             screen_width, _ = screen.get_size()
@@ -92,7 +92,6 @@ class Market:
         self.text = text
         self.current_color = color
         self.font = pygame.font.SysFont(None, 24)
-        self.defense = defense
 
         # Colors for non-focused and focused buttons.
         self.non_focus_color = constants.color_theme
@@ -197,31 +196,102 @@ class Market:
                     self.containers_by_category[cat].append(container)
                     self.containers_all.append(container)
                     container_id += 1
-        self.temp_cannon = cannon.Cannon(self.screen, market=self)
-        self.temp_barrier = barrier.Barrier(self.screen, market=self)
 
-    def get_container_rect(self, container_index):
-        """
-        Returns the pygame.Rect for the container specified by its index (0-9).
-        """
+        self.temp_defense = defense.Defense(self.screen, market=self, width=0, height=0, hp=0, dmg=0, cost=0, snapbox=0, type="default", scope=0, hasfront=False)
+        self.defensetypes = ["default", "special", "other"]
+        self.defenselist = [
+            cannon.Cannon(self.screen, market=self),
+            barrier.Barrier(self.screen, market=self)
+        ]
+
+        self.cached_mouse_pos = None
+        self.orientation = None
+
+    def handle_dragging(self, defense_item):
+        """Handles dragging logic for a defense item."""
+        
+        if defense_item is None:
+            return  # Avoid errors if defense_item is not set
+
+        # Get mouse position
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+
+        # Call the ondrag method if it exists
+        if hasattr(defense_item, "ondrag"):
+            defense_item.ondrag(self.screen)
+        
+        # Update position and angle
+        defense_item.pos = (mouse_x, mouse_y)
+        defense_item.angle = 90 if self.orientation == "vertical" else 0
+        defense_item.draw()
+
+        # Validate placement
+        flash = get_invalid_placement_flash_instance()
+        if not self.is_placeable((mouse_x, mouse_y), defense_item) and not self.rect.collidepoint((mouse_x, mouse_y)):
+            flash.trigger()
+        else:
+            flash.stop()
+
+
+    def draw_defenses_for_category(self, category_index):
+        # Get the center of the container for positioning
+        center = self.get_container_center(category_index)
+        self.pos = center  # Update container position if needed
+        
+        # Filter defenses that belong to the current category
+        filtered_defenses = [
+            defense for defense in self.defenselist 
+            if defense.type == self.defensetypes[category_index]
+        ]
+        
+        for defense in filtered_defenses:
+            # Optionally, add debugging info:
+            print(f"Drawing defense: {defense} of type {defense.type}")
+            defense.draw(self)
+            if defense.hasfront:
+                print("hasfront")
+            else:
+                print("no front")
+
+
+    def ondrag(self, screen):
+        mouse_x, mouse_y = self.cached_mouse_pos
+        self.orientation, _ = self.get_continuous_path_orientation((mouse_x, mouse_y))
+        self.angle = 90 if self.orientation == "vertical" else 0 
+        if self.orientation == "vertical":
+            self.defenselist[1].angle = 90
+        else:
+            self.defenselist[1].angle = 0
+        return self.defenselist[1].draw()
+    
+    def get_container_rect(self, category_index):
+        # Calculate the total grid dimensions.
         grid_width = self.num_cols * self.container_size + (self.num_cols + 1) * self.gap
         grid_height = self.num_rows * self.container_size + (self.num_rows + 1) * self.gap
-        vertical_offset = 20  # move the grid 20 pixels lower
+        vertical_offset = 20  # Moves the grid 20 pixels lower.
+
+        # Center the grid inside self.rect.
         start_x = self.rect.x + (self.rect.width - grid_width) // 2
         start_y = self.rect.y + (self.rect.height - grid_height) // 2 + vertical_offset
 
-        row = container_index // self.num_cols
-        col = container_index % self.num_cols
+        # Determine the row and column based on the category index.
+        row = category_index // self.num_cols
+        col = category_index % self.num_cols
+
+        # Calculate the x and y coordinates for the container.
         container_x = start_x + self.gap + col * (self.container_size + self.gap)
         container_y = start_y + self.gap + row * (self.container_size + self.gap)
+
         return pygame.Rect(container_x, container_y, self.container_size, self.container_size)
 
-    def get_container_center(self, container_index):
+    def get_container_center(self, category_index):
         """
-        Returns the (x, y) coordinates for the center of the container specified by its index.
+        Returns the (x, y) coordinates for the center of the container (category)
+        specified by its index.
         """
-        rect = self.get_container_rect(container_index)
+        rect = self.get_container_rect(category_index)
         return rect.center
+
 
     def distance_to_segment(self, point, start, end):
         # Compute the distance from a point to a line segment (start to end)
@@ -331,22 +401,29 @@ class Market:
         using an increased tolerance in areas where the path orientation is continuous.
         Also ensures the point is on-screen.
         """
+        if defense is None:
+            return False  # If there's no defense, placement is invalid
+
         if not self.screen.get_rect().collidepoint(point):
-            return False
-        orientation, continuous = self.get_continuous_path_orientation(point)
-        tolerance = base_tolerance + (defense.snapbox * 0.5 if continuous else 0)
-        for i in range(len(self.path_points) - 1):
-            seg_start = self.path_points[i]
-            seg_end = self.path_points[i + 1]
-            if self.distance_to_segment(point, seg_start, seg_end) <= tolerance:
-                if isinstance(defense, barrier.Barrier):
-                    return True
-                else:
-                    return False
+            return False  # Ensure point is inside the screen
+
+        # Get the orientation and check if the path is continuous at this point
+        self.orientation, continuous = self.get_continuous_path_orientation(point)
+        
+        # Ensure defense has a `snapbox` attribute before accessing it
+        tolerance = base_tolerance + (getattr(defense, "snapbox", 0) * 0.5 if continuous else 0)
+
+        # Check if the point is close to the path
+        near_path = any(
+            self.distance_to_segment(point, self.path_points[i], self.path_points[i + 1]) <= tolerance
+            for i in range(len(self.path_points) - 1)
+        )
+
+        # Placement rules:
         if isinstance(defense, barrier.Barrier):
-            return False
-        else:
-            return True
+            return near_path  # Barriers must be near the path
+        return not near_path  # Other defenses must be placed away from the path
+
 
     def update(self, events):
         for event in events:
@@ -386,9 +463,8 @@ class Market:
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.dragging_item:
                     drop_point = event.pos
-                    print("hejjjjj")
-                    orientation, continuous = self.get_continuous_path_orientation(drop_point)
-                    self.dragging_item.angle = 90 if orientation == "vertical" else 0
+                    self.orientation, continuous = self.get_continuous_path_orientation(drop_point)
+                    self.dragging_item.angle = 90 if self.orientation == "vertical" else 0
                     if self.is_placeable(drop_point, self.dragging_item):
                         snapped_point = self.snap_point_to_path(drop_point)
                         final_point = snapped_point if snapped_point is not None else drop_point
@@ -422,78 +498,26 @@ class Market:
         # Draw market background
         pygame.draw.rect(screen, self.current_color, self.rect)
 
-        # Center the grid of 10 containers (5 rows x 2 columns) within the market.
-        num_cols = 2
-        num_rows = 5
-        gap = 5
-        container_size = 70  # fixed container size
+                # Assuming your grid has num_cols * num_rows containers:
+        num_containers = self.num_cols * self.num_rows
 
-        grid_width = num_cols * container_size + (num_cols + 1) * gap
-        grid_height = num_rows * container_size + (num_rows + 1) * gap
-        vertical_offset = 20  # consistent vertical offset
-        start_x = self.rect.x + (self.rect.width - grid_width) // 2
-        start_y = self.rect.y + (self.rect.height - grid_height) // 2 + vertical_offset
+        for container_index in range(num_containers):
+            container_rect = self.get_container_rect(container_index)
+            pygame.draw.rect(self.screen, (15, 15, 15), container_rect, border_radius=3)
 
-        for row in range(num_rows):
-            for col in range(num_cols):
-                x = start_x + gap + col * (container_size + gap)
-                y = start_y + gap + row * (container_size + gap)
-                container_rect = pygame.Rect(x, y, container_size, container_size)
-                pygame.draw.rect(screen, (15, 15, 15), container_rect, border_radius=3)
+        for idx, btn in enumerate(self.category_btns):
+                    
+            btn.draw(screen)  # Draw the container button
+            
+            # If this container is focused, draw its defenses
+            if self.focused_btn == btn:
+                self.draw_defenses_for_category(idx)
 
-        for btn in self.category_btns:
-            btn.draw(screen)
-        if self.focused_btn == self.category_btns[2]:
-            center = self.get_container_center(0)
-            orientation, continuous = self.get_continuous_path_orientation(center)
-            if orientation == "vertical":
-                self.temp_barrier.angle = 90
-                width, height = 48, 20
-            else:
-                self.temp_barrier.angle = 0
-                width, height = 20, 48
-            rect = pygame.Rect(center[0] - width // 2, center[1] - height // 2, width, height)
-            if economy.balance >= self.temp_barrier.cost:
-                self.temp_barrier.isfront = True
-                self.temp_barrier.draw()
-            else:
-                # Create a copy of the barrier image with 50% reduced brightness
-                barrier_surface = self.temp_barrier.barrier.copy()
-                dark_surface = pygame.Surface(barrier_surface.get_size(), pygame.SRCALPHA)
-                dark_surface.fill((0, 0, 0, 128))  # 50% transparent black
-                barrier_surface.blit(dark_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-                self.screen.blit(barrier_surface, self.temp_barrier.rect)
+        # Assuming self.category_btns and self.defensetypes correspond,
+        # and self.focused_btn is the currently active category button
 
-        # If an item is being dragged (from a container), attach it to the cursor.
-        if isinstance(self.dragging_item, barrier.Barrier):
-            mouse_x, mouse_y = cached_mouse_pos
-            self.dragging_item.pos = mouse_x, mouse_y
-            self.dragging_item.angle = 90 if orientation == "vertical" else 0
-            if self.dragging_item.angle == 90:
-                self.dragging_item.draw()
-            else:
-                self.dragging_item.draw()
-            if not self.is_placeable((mouse_x, mouse_y), self.dragging_item) and not self.rect.collidepoint(cached_mouse_pos):
-                flash = get_invalid_placement_flash_instance()
-                flash.trigger()
-            else:
-                flash = get_invalid_placement_flash_instance()
-                flash.stop()
+        self.handle_dragging(self.dragging_item)
 
-            # If the defense being dragged is a Cannon, draw the cannon images instead of a rectangle
-        if isinstance(self.dragging_item, cannon.Cannon):
-            mouse_x, mouse_y = cached_mouse_pos
-            self.dragging_item.pos = mouse_x, mouse_y
-            self.dragging_item.draw()
-
-            ###if isinstace cannon
-
-            if not self.is_placeable((mouse_x, mouse_y), self.dragging_item) and not self.rect.collidepoint(cached_mouse_pos):
-                flash = get_invalid_placement_flash_instance()
-                flash.trigger()
-            else:
-                flash = get_invalid_placement_flash_instance()
-                flash.stop()
         # Update and draw the invalid placement flash
         flash = get_invalid_placement_flash_instance()
         flash.update()  
@@ -510,16 +534,6 @@ class Market:
             else:
                 self.pin_btn_pressed = False
             self.pin_btn.current_color = (255, 255, 255) if self.market_is_pinned else (150, 150, 150)
-
-        if self.focused_btn == self.category_btns[0]:
-            center = self.get_container_center(0)
-            # Get a rectangle for each image centered at that location
-
-            # Blit the cannon images using the updated, centered rects
-            screen.blit(self.temp_cannon.cannon_base, self.temp_cannon.base_rect)
-            screen.blit(self.temp_cannon.cannon_pipe, self.temp_cannon.pipe_rect)
-
-            screen.blit(self.temp_barrier.barrier, self.temp_barrier.rect)
 
     def draw_defenses(self, screen):
         """

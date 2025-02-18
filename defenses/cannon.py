@@ -5,8 +5,8 @@ import economy  # for refunding when selling
 import defenses.defense as defense
 
 class Cannon(defense.Defense):
-    def __init__(self, screen, market, width=4, height=4, hp=250, dmg=1, cost=1000, snapbox=35, scope=200, type="default"):
-        super().__init__(screen, market, hp, dmg, cost, width, height, snapbox, scope, type)
+    def __init__(self, screen, market, width=4, height=4, hp=250, dmg=1, cost=1000, snapbox=35, scope=200, type="default", hasfront=False):
+        super().__init__(screen, market, hp, dmg, cost, width, height, snapbox, scope, type, hasfront)
         self.screen = screen
         self.scope = scope
         self.cannon_base = pygame.image.load("assets/cannon/base.png").convert_alpha()
