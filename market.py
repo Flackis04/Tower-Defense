@@ -6,7 +6,7 @@ import effects
 import config  # configuration file for drag-and-drop settings
 import math
 import path  # used to generate the path points
-import defenses.bloja as bloja
+import defenses.barrier as barrier
 from effects import get_flash_instance, get_invalid_placement_flash_instance
 
 class MarketButton:
@@ -150,7 +150,7 @@ class Market:
 
         # Load the small icon image for items.
         # Make sure that the image file exists in the specified path.
-        self.item_icon = pygame.image.load("img/up-arrow.png").convert_alpha()
+        self.item_icon = pygame.image.load("assets/up-arrow.png").convert_alpha()
         # Scale the icon to a desired size (e.g. 20x20 pixels).
         self.item_icon = pygame.transform.scale(self.item_icon, (20, 20))
         
@@ -197,14 +197,8 @@ class Market:
                     self.containers_by_category[cat].append(container)
                     self.containers_all.append(container)
                     container_id += 1
-
-        # --- End Improved Inventory System ---
-
-        # Load the cannon images and store them as attributes of the Market object
-        self.cannon_base = pygame.transform.scale(pygame.image.load("img/cannon/base.png").convert_alpha(), (int(pygame.image.load("img/cannon/base.png").get_width() * 1.5), int(pygame.image.load("img/cannon/base.png").get_height() * 1.5)))
-        self.cannon_pipe = pygame.transform.scale(pygame.image.load("img/cannon/pipe.png").convert_alpha(), (int(pygame.image.load("img/cannon/pipe.png").get_width() * 1.5), int(pygame.image.load("img/cannon/pipe.png").get_height() * 1.5)))
-        self.cannon_pipe_original = self.cannon_pipe.copy()
-
+        self.temp_cannon = cannon.Cannon(self.screen, market=self)
+        self.temp_barrier = barrier.Barrier(self.screen, market=self)
 
     def get_container_rect(self, container_index):
         """
@@ -345,11 +339,11 @@ class Market:
             seg_start = self.path_points[i]
             seg_end = self.path_points[i + 1]
             if self.distance_to_segment(point, seg_start, seg_end) <= tolerance:
-                if isinstance(defense, bloja.Blöja):
+                if isinstance(defense, barrier.Barrier):
                     return True
                 else:
                     return False
-        if isinstance(defense, bloja.Blöja):
+        if isinstance(defense, barrier.Barrier):
             return False
         else:
             return True
@@ -371,14 +365,14 @@ class Market:
                             if self.focused_btn == self.category_btns[0]:
                                 # For Cannon (cost: 1000)
                                 if economy.balance >= 1000:
-                                    self.dragging_item = cannon.Cannon(self.screen, self, (0, 0, 255))
+                                    self.dragging_item = cannon.Cannon(self.screen, self)
                                 else:
                                     flash = get_flash_instance()
                                     flash.trigger()
                             elif self.focused_btn == self.category_btns[2]:
-                                # For Blöja (cost: 500)
+                                # For barrier (cost: 500)
                                 if economy.balance >= 500:
-                                    self.dragging_item = bloja.Blöja(self.screen, self, (255, 0, 255))
+                                    self.dragging_item = barrier.Barrier(self.screen, self)
                                 else:
                                     flash = get_flash_instance()
                                     flash.trigger()
@@ -450,34 +444,37 @@ class Market:
         for btn in self.category_btns:
             btn.draw(screen)
         if self.focused_btn == self.category_btns[2]:
-            blöja = bloja.Blöja(self.screen, self, (255, 0, 255))
             center = self.get_container_center(0)
             orientation, continuous = self.get_continuous_path_orientation(center)
             if orientation == "vertical":
-                blöja.angle = 90
+                self.temp_barrier.angle = 90
                 width, height = 48, 20
             else:
-                blöja.angle = 0
+                self.temp_barrier.angle = 0
                 width, height = 20, 48
             rect = pygame.Rect(center[0] - width // 2, center[1] - height // 2, width, height)
-            if economy.balance >= blöja.cost:
-                pygame.draw.rect(screen, blöja.color, rect)
+            if economy.balance >= self.temp_barrier.cost:
+                self.temp_barrier.isfront = True
+                self.temp_barrier.draw()
             else:
-                blöja = bloja.Blöja(self.screen, self, (55, 0, 55))
-                pygame.draw.rect(screen, blöja.color, rect)
+                # Create a copy of the barrier image with 50% reduced brightness
+                barrier_surface = self.temp_barrier.barrier.copy()
+                dark_surface = pygame.Surface(barrier_surface.get_size(), pygame.SRCALPHA)
+                dark_surface.fill((0, 0, 0, 128))  # 50% transparent black
+                barrier_surface.blit(dark_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+                self.screen.blit(barrier_surface, self.temp_barrier.rect)
 
         # If an item is being dragged (from a container), attach it to the cursor.
-        if isinstance(self.dragging_item, bloja.Blöja):
+        if isinstance(self.dragging_item, barrier.Barrier):
             mouse_x, mouse_y = cached_mouse_pos
             orientation, _ = self.get_continuous_path_orientation((mouse_x, mouse_y))
             self.dragging_item.angle = 90 if orientation == "vertical" else 0
             if self.dragging_item.angle == 90:
                 width, height = 48, 20
+                screen.blit(self.dragging_item.barrier, cached_mouse_pos)
             else:
                 width, height = 20, 48
-            drag_rect = pygame.Rect(mouse_x - width // 2, mouse_y - height // 2, width, height)
-            pygame.draw.rect(screen, self.dragging_item.color, drag_rect)
-
+                screen.blit(self.dragging_item.barrier, cached_mouse_pos)
             if not self.is_placeable((mouse_x, mouse_y), self.dragging_item) and not self.rect.collidepoint(cached_mouse_pos):
                 flash = get_invalid_placement_flash_instance()
                 flash.trigger()
@@ -488,10 +485,7 @@ class Market:
             # If the defense being dragged is a Cannon, draw the cannon images instead of a rectangle
         if isinstance(self.dragging_item, cannon.Cannon):
             mouse_x, mouse_y = cached_mouse_pos
-            base_rect = self.cannon_base.get_rect(center=(mouse_x, mouse_y))
-            pipe_rect = self.cannon_pipe.get_rect(center=(mouse_x, mouse_y))
-            screen.blit(self.cannon_base, base_rect)
-            screen.blit(self.cannon_pipe, pipe_rect)
+            cannon.Cannon.draw(self.temp_cannon.base_rect, self.temp_cannon.pipe_rect)
 
             ###if isinstace cannon
 
@@ -503,10 +497,10 @@ class Market:
                 flash.stop()
         # Update and draw the invalid placement flash
         flash = get_invalid_placement_flash_instance()
-        flash.update()
+        flash.update()  
         flash.draw()
         # Draw the very small button (pin button) in the bottom-left corner of the market.
-        self.pin_btn.draw(screen)
+        self.pin_btn.draw(self.screen)
         if self.pin_btn.rect.collidepoint(cached_mouse_pos):
             pygame.draw.rect(screen, (255, 255, 255), self.pin_btn.rect, 2)
             # Use rising edge detection to avoid multiple toggles per press.
@@ -521,11 +515,12 @@ class Market:
         if self.focused_btn == self.category_btns[0]:
             center = self.get_container_center(0)
             # Get a rectangle for each image centered at that location
-            base_rect = self.cannon_base.get_rect(center=center)
-            pipe_rect = self.cannon_pipe.get_rect(center=center)
-            # Blit the cannon base and pipe images at the calculated positions
-            screen.blit(self.cannon_base, base_rect)
-            screen.blit(self.cannon_pipe, pipe_rect)
+
+            # Blit the cannon images using the updated, centered rects
+            screen.blit(self.temp_cannon.cannon_base, self.temp_cannon.base_rect)
+            screen.blit(self.temp_cannon.cannon_pipe, self.temp_cannon.pipe_rect)
+
+            screen.blit(self.temp_barrier.barrier, self.temp_barrier.rect)
 
     def draw_defenses(self, screen):
         """

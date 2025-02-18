@@ -3,10 +3,9 @@ import market
 import economy
 
 class Defense:
-    def __init__(self, screen, market, color, hp, dmg, cost, snapbox, width, height, type):
+    def __init__(self, screen, market, width, height, hp, dmg, cost, snapbox, type, scope):
         self.screen = screen
         self.market = market
-        self.color = color
         self.hp = hp
         self.dmg = dmg
         self.cost = cost
@@ -17,6 +16,7 @@ class Defense:
         self.height = height
         self.type = type
         self.selected = False
+        self.scope = scope
 
     def get_rect(self):
         if self.pos is not None:
@@ -57,9 +57,7 @@ class Defense:
         return pygame.Rect(button_x, button_y, button_width, button_height)
 
     def draw(self):
-        # Generic draw method draws a simple rectangle.
-        rect = self.get_rect()
-        pygame.draw.rect(self.screen, self.color, rect)
+        
         if self.selected and self.type == "default":
             sell_button_rect = self.get_sell_button_rect()
             pygame.draw.rect(self.screen, (200, 0, 0), sell_button_rect)

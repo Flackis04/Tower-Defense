@@ -1,7 +1,7 @@
 import pygame
 import sys
 import os
-import enemies, path, market, defenses.cannon, defenses.bloja as bloja, constants, economy, text, spawner
+import enemies, path, market, defenses.cannon, defenses.barrier as barrier, constants, economy, text, spawner
 from effects import initialize_flash, get_flash_instance, initialize_invalid_placement_flash, get_invalid_placement_flash_instance
 
 pygame.init()
@@ -25,7 +25,7 @@ market_instance.enemies_list = enemies_list
 balance_display = text.Balance_Display(screen)
 
 # Create a defense instance using market_instance
-blöja_defense = defenses.bloja.Blöja(screen, market_instance, (255, 0, 255))
+barrier_defense = barrier.Barrier(screen, market_instance, (255, 0, 255))
 
 market_is_active = False
 market_btn_is_active = True
@@ -95,7 +95,7 @@ while running:
             enemy_center = (enemy.posx, enemy.posy)
             for defense in market_instance.placed_defenses:
                 defense_rect = defense.get_rect()
-                if circle_rect_collision(enemy_center, enemy.radius, defense_rect) and isinstance(defense, bloja.Blöja):
+                if circle_rect_collision(enemy_center, enemy.radius, defense_rect) and isinstance(defense, barrier.Barrier):
                     enemy.hp -= defense.dmg
                     defense.hp -= 1
                     if enemy.hp <= 0:
@@ -150,7 +150,6 @@ while running:
     # Draw player's HP below the balance text in a smaller font.
     hp_text = hp_font.render(f"HP: {player_hp}", True, (255, 255, 255))
     screen.blit(hp_text, (10, 50))
-
     pygame.display.flip()
 
 # Game Over state: Show a blurred screen with GAME OVER text and a Try Again button.
