@@ -12,14 +12,16 @@ class Cannon(defense.Defense):
         self.cannon_base = pygame.image.load("assets/cannon/base.png").convert_alpha()
         self.cannon_pipe = pygame.image.load("assets/cannon/pipe.png").convert_alpha()
         self.cannon_pipe_original = self.cannon_pipe.copy()
-        center = self.market.get_container_center(0)
-        self.base_rect = self.cannon_base.get_rect(center=center)
-        self.pipe_rect = self.cannon_pipe.get_rect(center=center)
+        self.center = self.market.get_container_center(0)
+        self.base_rect = self.cannon_base.get_rect(center=self.center)
+        self.pipe_rect = self.cannon_pipe.get_rect(center=self.center)
         original_pipe = self.cannon_pipe_original.copy()
         pipe_width, pipe_height = original_pipe.get_size()
         offset_surface = pygame.Surface((pipe_width, pipe_height), pygame.SRCALPHA)
         # IMPORTANT: blit the original pipe image onto the offset surface
         offset_surface.blit(original_pipe, (0, 0))
+        self.pos = None
+
 
     def get_distance(self, pos1, pos2):
         return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
@@ -51,12 +53,10 @@ class Cannon(defense.Defense):
             self.angle = 0
             self.cannon_pipe = self.cannon_pipe_original.copy()
     
-    def draw(self, center=None):
-        # If no center is provided, use self.pos if available, otherwise choose a default container center.
-        if center is None:
-            if self.pos is not None:
-                center = self.pos
-            else:
-                center = self.market.get_container_center(0)
-        self.screen.blit(self.cannon_base, self.base_rect)
-        self.screen.blit(self.cannon_pipe, self.pipe_rect)
+    def draw(self):
+        if hasattr(self, 'pos') and self.pos is not None:
+            # Update the rects to be centered at the cannon's position
+            self.base_rect = self.cannon_base.get_rect(center=self.pos)
+            self.pipe_rect = self.cannon_pipe.get_rect(center=self.pos)
+            self.screen.blit(self.cannon_base, self.base_rect)
+            self.screen.blit(self.cannon_pipe, self.pipe_rect)

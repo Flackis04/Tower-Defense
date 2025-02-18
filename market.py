@@ -467,14 +467,12 @@ class Market:
         # If an item is being dragged (from a container), attach it to the cursor.
         if isinstance(self.dragging_item, barrier.Barrier):
             mouse_x, mouse_y = cached_mouse_pos
-            orientation, _ = self.get_continuous_path_orientation((mouse_x, mouse_y))
+            self.dragging_item.pos = mouse_x, mouse_y
             self.dragging_item.angle = 90 if orientation == "vertical" else 0
             if self.dragging_item.angle == 90:
-                width, height = 48, 20
-                screen.blit(self.dragging_item.barrier, cached_mouse_pos)
+                self.dragging_item.draw()
             else:
-                width, height = 20, 48
-                screen.blit(self.dragging_item.barrier, cached_mouse_pos)
+                self.dragging_item.draw()
             if not self.is_placeable((mouse_x, mouse_y), self.dragging_item) and not self.rect.collidepoint(cached_mouse_pos):
                 flash = get_invalid_placement_flash_instance()
                 flash.trigger()
@@ -485,7 +483,8 @@ class Market:
             # If the defense being dragged is a Cannon, draw the cannon images instead of a rectangle
         if isinstance(self.dragging_item, cannon.Cannon):
             mouse_x, mouse_y = cached_mouse_pos
-            cannon.Cannon.draw(self.temp_cannon.base_rect, self.temp_cannon.pipe_rect)
+            self.dragging_item.pos = mouse_x, mouse_y
+            self.dragging_item.draw()
 
             ###if isinstace cannon
 
