@@ -1,11 +1,13 @@
 import pygame
-import market
 import economy
 
 class Defense:
-    def __init__(self, screen, market, width, height, hp, dmg, cost, snapbox, type, scope, hasfront):
-        self.screen = screen
+
+    local_container_index = 0
+    def __init__(self, screen, market, width, height, hp, dmg, cost, snapbox, scope, type, hasfront):
+
         self.market = market
+        self.screen = screen
         self.hp = hp
         self.dmg = dmg
         self.cost = cost
@@ -18,8 +20,10 @@ class Defense:
         self.selected = False
         self.scope = scope
         self.othertypes = [] #3rd category
-        self.hasfront = False
+        self.hasfront = hasfront
+        self.container_index = None
 
+                
     def get_rect(self):
         if self.pos is not None:
             x, y = self.pos
@@ -59,7 +63,8 @@ class Defense:
         return pygame.Rect(button_x, button_y, button_width, button_height)
 
     def draw(self):
-        
+        print(f"Drawing defense at index {self.container_index}")
+
         if self.selected and self.type == "default":
             sell_button_rect = self.get_sell_button_rect()
             pygame.draw.rect(self.screen, (200, 0, 0), sell_button_rect)

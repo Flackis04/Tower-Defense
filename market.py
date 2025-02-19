@@ -8,7 +8,10 @@ import math
 import path  # used to generate the path points
 import defenses.barrier as barrier
 import defenses.defense as defense
+from defenses.defense import Defense
 from effects import get_flash_instance, get_invalid_placement_flash_instance
+
+market_is_opened = False
 
 class MarketButton:
     def __init__(
@@ -50,6 +53,8 @@ class MarketButton:
                 and event.button == 1
                 and self.rect.collidepoint(event.pos)
             ):
+                global market_is_opened
+                market_is_opened = True
                 return True
         return False
 
@@ -69,7 +74,6 @@ class Container:
         self.category = category # Which category this container belongs to
         self.defense = None      # Holds a defense instance when assigned
 
-
 class Market:
     def __init__(
         self,
@@ -81,6 +85,8 @@ class Market:
         text="Items...",
         color=constants.color_theme,
         text_color=(255, 255, 255),
+        defensetypes = ["default", "special", "other"],
+        defenselist = [],
     ):
         if x is None:
             screen_width, _ = screen.get_size()
@@ -92,10 +98,11 @@ class Market:
         self.text = text
         self.current_color = color
         self.font = pygame.font.SysFont(None, 24)
-
+        self.defensetypes = defensetypes
+        self.defenselist = defenselist
         # Colors for non-focused and focused buttons.
         self.non_focus_color = constants.color_theme
-        self.focus_color = (255, 0, 0)
+        self.focus_color = (50, 50, 205)
 
         self.focused_btn = None
         self.category_btns = []
@@ -132,8 +139,7 @@ class Market:
         # New attribute to debounce the small pin button
         self.pin_btn_pressed = False
 
-        # Add the market_is_opened boolean.
-        self.market_is_opened = False
+
 
         # Set up an inventory for the market's containers.
         # Assuming we have 5 rows x 2 columns (10 containers); you can adjust the logic here.
@@ -198,14 +204,59 @@ class Market:
                     container_id += 1
 
         self.temp_defense = defense.Defense(self.screen, market=self, width=0, height=0, hp=0, dmg=0, cost=0, snapbox=0, type="default", scope=0, hasfront=False)
-        self.defensetypes = ["default", "special", "other"]
         self.defenselist = [
             cannon.Cannon(self.screen, market=self),
             barrier.Barrier(self.screen, market=self)
         ]
-
+        self.category_type = None
         self.cached_mouse_pos = None
         self.orientation = None
+    
+    def update_market(self):
+        """Called each frame to update market UI based on user interaction."""
+        if market_is_opened and self.focused_btn:
+            # Determine the focused category based on the focused button
+            focused_category_index = self.category_btns.index(self.focused_btn)
+            self.category_type = self.defensetypes[focused_category_index]
+            self.draw_defenses_for_category(focused_category_index)
+
+    def draw_defenses_for_category(self, category_index):
+        # Set the current category type
+        self.category_type = self.defensetypes[category_index]
+        print("Contents of defenselist:", self.defenselist)
+        print("Expected category type:", self.category_type)
+        
+        # Filter defenses that belong to the current category
+        filtered_defenses = [defense for defense in self.defenselist if defense.type == self.category_type]
+        print(f"Filtered defenses: {filtered_defenses}")
+        
+        # If no defenses match the current category, draw the defense
+        if not filtered_defenses:
+            for defense in self.defenselist:
+                if defense.type == self.category_type[2]:
+                    print(self.category_type[2])
+                    filtered_defenses.append(defense)
+        
+        # Assign container indices for these defenses (reset counter each time)
+        self.set_container_index(filtered_defenses)
+        
+        # Draw each defense in the filtered list
+        for defense in filtered_defenses:
+            center = self.get_container_center(defense.container_index)
+            defense.pos = center
+            defense.draw()
+            if getattr(defense, "hasfront", False):
+                print("hasfront")
+            else:
+                print("no front")
+        
+    def set_container_index(self, defenses):
+        # Reset the counter and assign indices for the given list of defenses
+        Defense.local_container_index = 0
+        for defense in defenses:
+            defense.container_index = Defense.local_container_index
+            Defense.local_container_index += 1
+
 
     def handle_dragging(self, defense_item):
         """Handles dragging logic for a defense item."""
@@ -231,27 +282,6 @@ class Market:
             flash.trigger()
         else:
             flash.stop()
-
-
-    def draw_defenses_for_category(self, category_index):
-        # Get the center of the container for positioning
-        center = self.get_container_center(category_index)
-        self.pos = center  # Update container position if needed
-        
-        # Filter defenses that belong to the current category
-        filtered_defenses = [
-            defense for defense in self.defenselist 
-            if defense.type == self.defensetypes[category_index]
-        ]
-        
-        for defense in filtered_defenses:
-            # Optionally, add debugging info:
-            print(f"Drawing defense: {defense} of type {defense.type}")
-            defense.draw(self)
-            if defense.hasfront:
-                print("hasfront")
-            else:
-                print("no front")
 
 
     def ondrag(self, screen):
@@ -431,8 +461,6 @@ class Market:
                 # If the click is inside the market
                 if self.rect.collidepoint(event.pos):
                     # Open the market if it's not already open.
-                    if not self.market_is_opened:
-                        self.market_is_opened = True
 
                     # Immediately check containers for a defense drag initiation.
                     for container in self.containers_all:
@@ -479,7 +507,6 @@ class Market:
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.rect.collidepoint(event.pos):
-                    self.market_is_opened = True
                     for btn in self.category_btns:
                         if btn.rect.collidepoint(event.pos):
                             if self.focused_btn and self.focused_btn != btn:
@@ -495,23 +522,24 @@ class Market:
         return False
 
     def draw(self, screen, cached_mouse_pos):
-        # Draw market background
         pygame.draw.rect(screen, self.current_color, self.rect)
-
-                # Assuming your grid has num_cols * num_rows containers:
+        
+        # Draw containers (background grid)
         num_containers = self.num_cols * self.num_rows
-
         for container_index in range(num_containers):
             container_rect = self.get_container_rect(container_index)
-            pygame.draw.rect(self.screen, (15, 15, 15), container_rect, border_radius=3)
-
-        for idx, btn in enumerate(self.category_btns):
-                    
-            btn.draw(screen)  # Draw the container button
-            
-            # If this container is focused, draw its defenses
-            if self.focused_btn == btn:
-                self.draw_defenses_for_category(idx)
+            pygame.draw.rect(screen, (15, 15, 15), container_rect, border_radius=3)
+        
+        # Draw category buttons
+        for btn in self.category_btns:
+            btn.draw(self.screen)
+        
+        # Draw defenses for the currently focused category (based on the focused button)
+        if market_is_opened:
+            print(market_is_opened)
+            self.focused_btn == self.category_btns[0]
+            focused_category_index = self.category_btns.index(self.focused_btn)
+            self.draw_defenses_for_category(focused_category_index)
 
         # Assuming self.category_btns and self.defensetypes correspond,
         # and self.focused_btn is the currently active category button

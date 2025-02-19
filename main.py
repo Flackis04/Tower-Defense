@@ -22,10 +22,12 @@ enemies_list = []
 market_btn = market.make_market_btn(screen)
 market_instance = market.make_market(screen)
 market_instance.enemies_list = enemies_list
+
+
 balance_display = text.Balance_Display(screen)
 
 # Create a defense instance using market_instance
-barrier_defense = barrier.Barrier(screen, market_instance, (255, 0, 255))
+barrier_defense = barrier.Barrier(screen, market_instance)
 
 market_is_active = False
 market_btn_is_active = True

@@ -1,5 +1,5 @@
 import pygame
-import market
+import market as market
 import math
 import economy  # for refunding when selling
 import defenses.defense as defense
@@ -12,6 +12,7 @@ class Cannon(defense.Defense):
         self.cannon_base = pygame.image.load("assets/cannon/base.png").convert_alpha()
         self.cannon_pipe = pygame.image.load("assets/cannon/pipe.png").convert_alpha()
         self.cannon_pipe_original = self.cannon_pipe.copy()
+        self.market = market
         self.center = self.market.get_container_center(0)
         self.base_rect = self.cannon_base.get_rect(center=self.center)
         self.pipe_rect = self.cannon_pipe.get_rect(center=self.center)
@@ -54,7 +55,9 @@ class Cannon(defense.Defense):
             self.cannon_pipe = self.cannon_pipe_original.copy()
     
     def draw(self):
+        print("drawing cannon")
         if hasattr(self, 'pos') and self.pos is not None:
+            print("drawing cannon 2")
             # Update the rects to be centered at the cannon's position
             self.base_rect = self.cannon_base.get_rect(center=self.pos)
             self.pipe_rect = self.cannon_pipe.get_rect(center=self.pos)
