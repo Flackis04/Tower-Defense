@@ -1,5 +1,4 @@
 import pygame
-import defenses.cannon as cannon
 import constants
 import economy
 import config  # configuration file for drag-and-drop settings
@@ -8,6 +7,8 @@ import time
 import path  # used to generate the path points
 import defenses.barrier as barrier
 import defenses.defense as defense
+import defenses.mortar as mortar
+import defenses.cannon as cannon
 from defenses.defense import Defense
 from effects import get_flash_instance, get_invalid_placement_flash_instance
 
@@ -159,7 +160,8 @@ class Market:
         self.defensetypes = defensetypes
         self.defenselist = [
             cannon.Cannon(self.screen, market=self),
-            barrier.Barrier(self.screen, market=self)
+            barrier.Barrier(self.screen, market=self),
+            mortar.Mortar(self.screen, market=self)
         ]
 
         # Temporary defense object (possibly for previewing or ghosting)
@@ -346,24 +348,24 @@ class Market:
     
     def get_container_drag_initiation(self, event):
         for container in self.containers_all:
-            container_rect = self.get_container_rect(container.id)
-            if container_rect.collidepoint(event.pos) and container.defense is None:
-                # Check which defense is being clicked based on the active tab btn
-                if self.focused_btn == self.tab_btns[0]:
-                    # For Cannon (cost: 1000)
-                    if economy.balance >= 1000:
-                        self.dragging_item = cannon.Cannon(self.screen, self)
-                    else:
-                        flash = get_flash_instance()
-                        flash.trigger()
-                elif self.focused_btn == self.tab_btns[2]:
-                    # For barrier (cost: 500)
-                    if economy.balance >= 500:
-                        self.dragging_item = barrier.Barrier(self.screen, self)
-                    else:
-                        flash = get_flash_instance()
-                        flash.trigger()
-                break
+                container_rect = self.get_container_rect(container.id)
+                if container_rect.collidepoint(event.pos) and container.defense is None:
+                    # Check which defense is being clicked based on the active tab btn
+                    if self.focused_btn == self.tab_btns[0]:
+                        # For Cannon (cost: 1000)
+                        if economy.balance >= 1000:
+                            self.dragging_item = cannon.Cannon(self.screen, self)
+                        else:
+                            flash = get_flash_instance()
+                            flash.trigger()
+                    elif self.focused_btn == self.tab_btns[2]:
+                        # For barrier (cost: 500)
+                        if economy.balance >= 500:
+                            self.dragging_item = barrier.Barrier(self.screen, self)
+                        else:
+                            flash = get_flash_instance()
+                            flash.trigger()
+                    break
 
 
     def distance_to_segment(self, point, start, end):

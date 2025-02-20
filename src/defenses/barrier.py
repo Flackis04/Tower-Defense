@@ -4,7 +4,7 @@ import market as market
 import math
 
 class Barrier(defense.Defense):
-    def __init__(self, screen, market, width=50, height=50, hp=50, dmg=1, cost=500, snapbox=35, type="other", hasfront=True, front_img=False):
+    def __init__(self, screen, market, width=50, height=50, hp=50, dmg=1, cost=500, snapbox=35, type="other", hasfront=False, front_img=False):
         super().__init__(screen, market, width, height, hp, dmg, cost, snapbox, type, "other", hasfront, front_img)
         self.barrier = pygame.image.load("assets/barrier/barrier.png").convert_alpha()
         self.barrier_front = pygame.image.load("assets/barrier/barrier_front.png").convert_alpha()
