@@ -84,4 +84,6 @@ class Defense:
             darkness_filter.blit(dark_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             self.screen.blit(darkness_filter, self.rect)
 
-
+#Big ball cannon!
+#vind
+#bank

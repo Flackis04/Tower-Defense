@@ -509,14 +509,7 @@ class Market:
                 self.dragging_item.pos = final_point
                 self.placed_defenses.append(self.dragging_item)
                 economy.balance -= self.dragging_item.cost  # Deduct cost
-
-                # Handle orientation for barriers
-                self.orientation, continuous = self.get_continuous_path_orientation(drop_point)
-                print(self.dragging_item.angle)
-                
-                if self.dragging_item.angle == 90 and isinstance(self.dragging_item, barrier.Barrier):
-                    self.dragging_item.ondrag(event.pos)  # Ensure proper rendering of rotated item
-            
+                            
             # Stop invalid placement flash
             flash = get_invalid_placement_flash_instance()
             flash.stop()
@@ -529,14 +522,12 @@ class Market:
 
     def update(self, events):
         """Called each frame to update market UI based on user interaction."""
-        print(self.is_active)
         for event in events:
             if self.is_active:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if self.rect.collidepoint(event.pos): #HERE
                         self.get_container_drag_initiation(event)
                     elif not self.market_is_pinned and not self.rect.collidepoint(event.pos) and self.is_active:
-                        print("closing market")
                         self.toggle()
                         self.focused_btn = None
                 elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -562,14 +553,12 @@ class Market:
 
     def draw(self, screen, cached_mouse_pos):
         """Called each frame to KEEP updated market UI on display."""
-        print("market is pinned:", self.market_is_pinned)
 
         # Draw defenses for the currently focused tab (based on the focused btn)
         if self.is_active:
             #Drawing
             if not self.focused_btn:
                 self.focused_btn = self.tab_btns[0]
-                print(self.focused_btn)
                 self.tab_index = 0
             if not self.is_ghost_active:
                 pygame.draw.rect(screen, self.current_color, self.rect)
@@ -586,7 +575,6 @@ class Market:
                     pygame.draw.rect(screen, (255, 255, 255), self.pin_btn.rect, 0, border_radius=1)
                     if pygame.mouse.get_pressed()[0]:
                         if not self.pin_btn_pressed:
-                            print("pinning market:", self.market_is_pinned)
                             self.market_is_pinned = not self.market_is_pinned
                             self.pin_btn_pressed = True
                     else:
@@ -608,7 +596,10 @@ class Market:
         of whether the market menu is open.
         """
         for defense in self.placed_defenses:
-            defense.draw()
+            if isinstance(defense, barrier.Barrier) and self.is_near_path(defense.pos, tolerance=10):
+                defense.ondrag(defense.pos)
+            else:
+                defense.draw()
 
     def toggle(self):
         """Toggles the market state (open/close)."""
