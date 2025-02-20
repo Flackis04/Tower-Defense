@@ -5,35 +5,40 @@ import economy
 import effects
 import config  # configuration file for drag-and-drop settings
 import math
+import time
 import path  # used to generate the path points
 import defenses.barrier as barrier
 import defenses.defense as defense
 from defenses.defense import Defense
 from effects import get_flash_instance, get_invalid_placement_flash_instance
 
-market_is_opened = False
-
 class MarketButton:
     def __init__(
         self,
+        market_instance,
         x,
         y,
         width,
         height,
         text="Buy",
         color=(50, 205, 50),
-        hover_color=(70, 225, 70),
+        hover_color=(100, 255, 100),
         text_color=(255, 255, 255),
         border_radius=0,
+        transition_time=0.25,
     ):
+        self.market = market_instance
         self.rect = pygame.Rect(x, y, width, height)
         self.color = color
         self.hover_color = hover_color
+        self.current_color = color
         self.text_color = text_color
         self.text = text
-        self.current_color = color
         self.font = pygame.font.SysFont(None, 24)
         self.border_radius = border_radius
+        self.transition_time = transition_time  # Time in seconds
+        self.transition_start = None  # Track transition start time
+        self.hovering = False
 
     def draw(self, surface):
         pygame.draw.rect(
@@ -44,25 +49,46 @@ class MarketButton:
         surface.blit(text_surface, text_rect)
 
     def update(self, events, cached_mouse_pos):
-        self.current_color = (
-            self.hover_color if self.rect.collidepoint(cached_mouse_pos) else self.color
-        )
+        is_hovering = self.rect.collidepoint(cached_mouse_pos)
+
+        # Start transition if hover state changes
+        if is_hovering != self.hovering:
+            self.hovering = is_hovering
+            self.transition_start = time.time()  # Record the start time
+
+        # Handle smooth transition
+        if self.transition_start is not None:
+            elapsed = time.time() - self.transition_start
+            t = min(elapsed / self.transition_time, 1)  # Normalize to [0, 1]
+            self.current_color = self.lerp(self.color, self.hover_color, t) if self.hovering else self.lerp(self.hover_color, self.color, t)
+
+            # Stop transition if completed
+            if t >= 1:
+                self.transition_start = None
+
         for event in events:
             if (
                 event.type == pygame.MOUSEBUTTONDOWN
                 and event.button == 1
                 and self.rect.collidepoint(event.pos)
             ):
-                global market_is_opened
-                market_is_opened = True
+                self.market.is_active = True
                 return True
         return False
+    
+    def lerp(self, color1, color2, t):
+        """Linear interpolation between two RGB colors."""
+        return (
+            int(color1[0] + (color2[0] - color1[0]) * t),
+            int(color1[1] + (color2[1] - color1[1]) * t),
+            int(color1[2] + (color2[2] - color1[2]) * t)
+        )
 
 
-def make_market_btn(screen, button_width=100, button_height=40, margin=10):
+def make_market_btn(screen, market_instance, button_width=100, button_height=40, margin=10):
     screen_width, _ = screen.get_size()
     x = screen_width - button_width - margin
-    return MarketButton(x, margin, button_width, button_height)
+    return MarketButton(market_instance, x, margin, button_width, button_height)
 
 
 # --- New Container class for inventory management ---
@@ -100,6 +126,8 @@ class Market:
         self.font = pygame.font.SysFont(None, 24)
         self.defensetypes = defensetypes
         self.defenselist = defenselist
+        self.is_active = False  # Replaces market_is_active
+        self.btn_is_active = True  # Replaces market_btn_is_active
         # Colors for non-focused and focused buttons.
         self.non_focus_color = constants.color_theme
         self.focus_color = (50, 50, 205)
@@ -116,6 +144,7 @@ class Market:
             )
             x_button = self.rect.x + base_button_width * i
             btn = MarketButton(
+                self,
                 x_button,
                 self.rect.y,
                 current_button_width,
@@ -169,6 +198,7 @@ class Market:
         small_button_x = self.rect.x + 5  # align with the market's left edge
         small_button_y = self.rect.y - 5 + self.rect.height - small_button_height  # bottom aligned with the market
         self.pin_btn = MarketButton(
+            self,
             small_button_x,
             small_button_y,
             small_button_width,
@@ -203,7 +233,7 @@ class Market:
                     self.containers_all.append(container)
                     container_id += 1
 
-        self.temp_defense = defense.Defense(self.screen, market=self, width=0, height=0, hp=0, dmg=0, cost=0, snapbox=0, type="default", scope=0, hasfront=False)
+        self.temp_defense = defense.Defense(self.screen, market=self, width=0, height=0, hp=0, dmg=0, cost=0, snapbox=0, type="default", scope=0, has_front=False, front_img=False)
         self.defenselist = [
             cannon.Cannon(self.screen, market=self),
             barrier.Barrier(self.screen, market=self)
@@ -211,45 +241,31 @@ class Market:
         self.category_type = None
         self.cached_mouse_pos = None
         self.orientation = None
-    
-    def update_market(self):
-        """Called each frame to update market UI based on user interaction."""
-        if market_is_opened and self.focused_btn:
-            # Determine the focused category based on the focused button
-            focused_category_index = self.category_btns.index(self.focused_btn)
-            self.category_type = self.defensetypes[focused_category_index]
-            self.draw_defenses_for_category(focused_category_index)
+
 
     def draw_defenses_for_category(self, category_index):
         # Set the current category type
         self.category_type = self.defensetypes[category_index]
-        print("Contents of defenselist:", self.defenselist)
-        print("Expected category type:", self.category_type)
         
         # Filter defenses that belong to the current category
         filtered_defenses = [defense for defense in self.defenselist if defense.type == self.category_type]
-        print(f"Filtered defenses: {filtered_defenses}")
         
-        # If no defenses match the current category, draw the defense
         if not filtered_defenses:
             for defense in self.defenselist:
                 if defense.type == self.category_type[2]:
                     print(self.category_type[2])
                     filtered_defenses.append(defense)
         
-        # Assign container indices for these defenses (reset counter each time)
         self.set_container_index(filtered_defenses)
         
-        # Draw each defense in the filtered list
         for defense in filtered_defenses:
             center = self.get_container_center(defense.container_index)
             defense.pos = center
+            defense.front_img = True
             defense.draw()
-            if getattr(defense, "hasfront", False):
-                print("hasfront")
-            else:
-                print("no front")
-        
+            if getattr(defense, "hasfront", False) and getattr(defense, "front_img", False):
+                defense.draw_front_img()
+
     def set_container_index(self, defenses):
         # Reset the counter and assign indices for the given list of defenses
         Defense.local_container_index = 0
@@ -258,41 +274,49 @@ class Market:
             Defense.local_container_index += 1
 
 
-    def handle_dragging(self, defense_item):
+    def handle_dragging(self, defense):
         """Handles dragging logic for a defense item."""
-        
-        if defense_item is None:
-            return  # Avoid errors if defense_item is not set
+        if not defense:
+            return  # Avoid errors if defense is None
 
-        # Get mouse position
-        mouse_x, mouse_y = pygame.mouse.get_pos()
+        # Get current mouse position as a tuple.
+        mouse_pos = pygame.mouse.get_pos()
 
-        # Call the ondrag method if it exists
-        if hasattr(defense_item, "ondrag"):
-            defense_item.ondrag(self.screen)
-        
-        # Update position and angle
-        defense_item.pos = (mouse_x, mouse_y)
-        defense_item.angle = 90 if self.orientation == "vertical" else 0
-        defense_item.draw()
+        # Always update the defense's position.
+        defense.pos = mouse_pos
 
-        # Validate placement
+        # Check if the current mouse position is near the path.
+        # Adjust the tolerance value as needed.
+        #15 is golden
+        near_path = self.is_near_path(mouse_pos, tolerance=20)
+
+        if near_path:
+            # If near the path, update orientation and rotate the defense.
+            self.orientation, _ = self.get_continuous_path_orientation(mouse_pos)
+            # Set new angle: if orientation is non-vertical, rotate 90°, otherwise 0°.
+            new_angle = 90 if self.orientation != "vertical" else 0
+            defense.last_angle = new_angle  # Save this as the last rotation value.
+            defense.angle = new_angle
+            if isinstance(defense, barrier.Barrier):
+                defense.ondrag(mouse_pos)
+        else:
+            # If not near the path, do not change the angle.
+            # If last_angle hasn't been set before, default to 0.
+            if not hasattr(defense, "last_angle"):
+                defense.last_angle = 0
+            defense.angle = defense.last_angle
+            # Simply draw the defense without rotating.
+            defense.draw()
+
+        # Validate placement (flash if invalid)
         flash = get_invalid_placement_flash_instance()
-        if not self.is_placeable((mouse_x, mouse_y), defense_item) and not self.rect.collidepoint((mouse_x, mouse_y)):
+        if not self.is_placeable(defense.pos, defense) and not self.rect.collidepoint(defense.pos):
             flash.trigger()
         else:
             flash.stop()
 
+        print(f"Dragging {defense} to {defense.pos}, angle: {defense.angle} (last_angle: {defense.last_angle})")
 
-    def ondrag(self, screen):
-        mouse_x, mouse_y = self.cached_mouse_pos
-        self.orientation, _ = self.get_continuous_path_orientation((mouse_x, mouse_y))
-        self.angle = 90 if self.orientation == "vertical" else 0 
-        if self.orientation == "vertical":
-            self.defenselist[1].angle = 90
-        else:
-            self.defenselist[1].angle = 0
-        return self.defenselist[1].draw()
     
     def get_container_rect(self, category_index):
         # Calculate the total grid dimensions.
@@ -321,6 +345,27 @@ class Market:
         """
         rect = self.get_container_rect(category_index)
         return rect.center
+    
+    def get_container_drag_initiation(self, event):
+        for container in self.containers_all:
+            container_rect = self.get_container_rect(container.id)
+            if container_rect.collidepoint(event.pos) and container.defense is None:
+                # Check which defense is being clicked based on the active category button
+                if self.focused_btn == self.category_btns[0]:
+                    # For Cannon (cost: 1000)
+                    if economy.balance >= 1000:
+                        self.dragging_item = cannon.Cannon(self.screen, self)
+                    else:
+                        flash = get_flash_instance()
+                        flash.trigger()
+                elif self.focused_btn == self.category_btns[2]:
+                    # For barrier (cost: 500)
+                    if economy.balance >= 500:
+                        self.dragging_item = barrier.Barrier(self.screen, self)
+                    else:
+                        flash = get_flash_instance()
+                        flash.trigger()
+                break
 
 
     def distance_to_segment(self, point, start, end):
@@ -425,7 +470,7 @@ class Market:
         else:
             return None
 
-    def is_placeable(self, point, defense, base_tolerance=10):
+    def is_placeable(self, point, defense, base_tolerance=15):
         """
         Determines if the given point is close enough to some path segment,
         using an increased tolerance in areas where the path orientation is continuous.
@@ -441,7 +486,7 @@ class Market:
         self.orientation, continuous = self.get_continuous_path_orientation(point)
         
         # Ensure defense has a `snapbox` attribute before accessing it
-        tolerance = base_tolerance + (getattr(defense, "snapbox", 0) * 0.5 if continuous else 0)
+        tolerance = base_tolerance if continuous else 0
 
         # Check if the point is close to the path
         near_path = any(
@@ -454,54 +499,48 @@ class Market:
             return near_path  # Barriers must be near the path
         return not near_path  # Other defenses must be placed away from the path
 
+    def place_item(self, event):
+        """Handles placing an item when the user releases the mouse button."""
+        if self.dragging_item:
+            drop_point = event.pos
+            
+            if self.is_placeable(drop_point, self.dragging_item):
+                snapped_point = self.snap_point_to_path(drop_point)
+                final_point = snapped_point if snapped_point is not None else drop_point
+                
+                self.dragging_item.pos = final_point
+                self.placed_defenses.append(self.dragging_item)
+                economy.balance -= self.dragging_item.cost  # Deduct cost
+
+                # Handle orientation for barriers
+                self.orientation, continuous = self.get_continuous_path_orientation(drop_point)
+                print(self.dragging_item.angle)
+                
+                if self.dragging_item.angle == 90 and isinstance(self.dragging_item, barrier.Barrier):
+                    self.dragging_item.ondrag(event.pos)  # Ensure proper rendering of rotated item
+            
+            # Stop invalid placement flash
+            flash = get_invalid_placement_flash_instance()
+            flash.stop()
+
+            # Reset dragging item
+            self.dragging_item = None
+
 
     def update(self, events):
+        """Called each frame to update market UI based on user interaction."""
         for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                # If the click is inside the market
-                if self.rect.collidepoint(event.pos):
-                    # Open the market if it's not already open.
-
-                    # Immediately check containers for a defense drag initiation.
-                    for container in self.containers_all:
-                        container_rect = self.get_container_rect(container.id)
-                        if container_rect.collidepoint(event.pos) and container.defense is None:
-                            # Check which defense is being clicked based on the active category button
-                            if self.focused_btn == self.category_btns[0]:
-                                # For Cannon (cost: 1000)
-                                if economy.balance >= 1000:
-                                    self.dragging_item = cannon.Cannon(self.screen, self)
-                                else:
-                                    flash = get_flash_instance()
-                                    flash.trigger()
-                            elif self.focused_btn == self.category_btns[2]:
-                                # For barrier (cost: 500)
-                                if economy.balance >= 500:
-                                    self.dragging_item = barrier.Barrier(self.screen, self)
-                                else:
-                                    flash = get_flash_instance()
-                                    flash.trigger()
-                            break
-                else:
-                    # If clicked outside and the market is not pinned, close the market.
-                    if not self.market_is_pinned:
-                        self.market_is_opened = False
-                        return True
-
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                if self.dragging_item:
-                    drop_point = event.pos
-                    self.orientation, continuous = self.get_continuous_path_orientation(drop_point)
-                    self.dragging_item.angle = 90 if self.orientation == "vertical" else 0
-                    if self.is_placeable(drop_point, self.dragging_item):
-                        snapped_point = self.snap_point_to_path(drop_point)
-                        final_point = snapped_point if snapped_point is not None else drop_point
-                        self.dragging_item.pos = final_point
-                        self.placed_defenses.append(self.dragging_item)
-                        economy.balance -= self.dragging_item.cost
-                    flash = get_invalid_placement_flash_instance()
-                    flash.stop()
-                    self.dragging_item = None
+            if self.is_active:
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if self.rect.collidepoint(event.pos):
+                        self.get_container_drag_initiation(event)
+                    elif not self.market_is_pinned and not self.rect.collidepoint(event.pos):
+                        print("closing market")
+                        self.self.is_active = False
+                        self.focused_btn = None
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    if self.dragging_item:
+                        self.place_item(event)
 
         # Update category buttons and market open state.
         for event in events:
@@ -517,51 +556,46 @@ class Market:
                             break
                 else:
                     if not self.market_is_pinned:
-                        self.market_is_opened = False
-                        return True
-        return False
+                        self.self.is_active = False
 
     def draw(self, screen, cached_mouse_pos):
-        pygame.draw.rect(screen, self.current_color, self.rect)
-        
-        # Draw containers (background grid)
-        num_containers = self.num_cols * self.num_rows
-        for container_index in range(num_containers):
-            container_rect = self.get_container_rect(container_index)
-            pygame.draw.rect(screen, (15, 15, 15), container_rect, border_radius=3)
-        
-        # Draw category buttons
-        for btn in self.category_btns:
-            btn.draw(self.screen)
+        """Called each frame to KEEP updated market UI on display."""
+
         
         # Draw defenses for the currently focused category (based on the focused button)
-        if market_is_opened:
-            print(market_is_opened)
+        if self.is_active and self.focused_btn:
+            pygame.draw.rect(screen, self.current_color, self.rect)
+            num_containers = self.num_cols * self.num_rows
+            for container_index in range(num_containers):
+                container_rect = self.get_container_rect(container_index)
+                pygame.draw.rect(screen, (15, 15, 15), container_rect, border_radius=3)
+            for btn in self.category_btns:
+                btn.draw(self.screen)
+
             self.focused_btn == self.category_btns[0]
             focused_category_index = self.category_btns.index(self.focused_btn)
+            self.category_type = self.defensetypes[focused_category_index]
             self.draw_defenses_for_category(focused_category_index)
+            
+            self.handle_dragging(self.dragging_item)
 
-        # Assuming self.category_btns and self.defensetypes correspond,
-        # and self.focused_btn is the currently active category button
-
-        self.handle_dragging(self.dragging_item)
-
-        # Update and draw the invalid placement flash
-        flash = get_invalid_placement_flash_instance()
-        flash.update()  
-        flash.draw()
-        # Draw the very small button (pin button) in the bottom-left corner of the market.
-        self.pin_btn.draw(self.screen)
-        if self.pin_btn.rect.collidepoint(cached_mouse_pos):
-            pygame.draw.rect(screen, (255, 255, 255), self.pin_btn.rect, 2)
-            # Use rising edge detection to avoid multiple toggles per press.
-            if pygame.mouse.get_pressed()[0]:
-                if not self.pin_btn_pressed:
-                    self.market_is_pinned = not self.market_is_pinned
-                    self.pin_btn_pressed = True
-            else:
-                self.pin_btn_pressed = False
-            self.pin_btn.current_color = (255, 255, 255) if self.market_is_pinned else (150, 150, 150)
+            flash = get_invalid_placement_flash_instance()
+            flash.update()  
+            flash.draw()
+            
+            if self.dragging_item:
+                self.dragging_item.draw()
+            self.pin_btn.draw(self.screen)
+            if self.pin_btn.rect.collidepoint(cached_mouse_pos):
+                pygame.draw.rect(screen, (255, 255, 255), self.pin_btn.rect, 2)
+                # Use rising edge detection to avoid multiple toggles per press.
+                if pygame.mouse.get_pressed()[0]:
+                    if not self.pin_btn_pressed:
+                        self.market_is_pinned = not self.market_is_pinned
+                        self.pin_btn_pressed = True
+                else:
+                    self.pin_btn_pressed = False
+                self.pin_btn.current_color = (255, 255, 255) if self.market_is_pinned else (150, 150, 150)
 
     def draw_defenses(self, screen):
         """
@@ -571,9 +605,14 @@ class Market:
         for defense in self.placed_defenses:
             defense.draw()
 
+    def toggle(self):
+        """Toggles the market state (open/close)."""
+        self.is_active = not self.is_active
+        self.btn_is_active = not self.btn_is_active
 
 def make_market(screen, width=175, height=450):
     return Market(screen, width=width, height=height)
+    
 
 #class UpgradeButton:
     def __init__(self, x, y, width, height, container_index):

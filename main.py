@@ -19,8 +19,8 @@ cumulative_lengths = path.cumulative_distances(path_points)
 
 enemies_list = []
 
-market_btn = market.make_market_btn(screen)
 market_instance = market.make_market(screen)
+market_btn = market.make_market_btn(screen, market_instance)
 market_instance.enemies_list = enemies_list
 
 
@@ -51,7 +51,7 @@ def circle_rect_collision(circle_center, circle_radius, rect):
     return dx * dx + dy * dy <= circle_radius * circle_radius
 
 running = True
-while running:
+while running: #MAKE MORE FUNCTIONS OF THIS
     # Get delta time in milliseconds and update the game clock.
     dt = clock.tick(60)
     event_list = pygame.event.get()
@@ -65,14 +65,14 @@ while running:
     cached_mouse_pos = pygame.mouse.get_pos()
 
     # Check if the market button is clicked.
-    if market_btn.update(event_list, cached_mouse_pos) and market_btn_is_active:
-        market_is_active = not market_is_active
-        market_btn_is_active = not market_btn_is_active
-        # Remove the MOUSEBUTTONDOWN events so the click does not propagate further.
+    if market_btn.update(event_list, cached_mouse_pos) and market_instance.btn_is_active:
+        market_instance.toggle()
+
+        # Remove MOUSEBUTTONDOWN events to prevent click propagation
         event_list = [e for e in event_list if e.type != pygame.MOUSEBUTTONDOWN]
-    elif market_instance.update(event_list) and market_is_active:
-        market_is_active = not market_is_active
-        market_btn_is_active = not market_btn_is_active
+
+    elif market_instance.update(event_list) and market_instance.is_active:
+        market_instance.toggle()
 
     # Update enemy spawner and add any newly spawned enemies.
     new_enemies = enemy_spawner.update(dt)

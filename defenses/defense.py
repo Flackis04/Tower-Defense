@@ -4,7 +4,7 @@ import economy
 class Defense:
 
     local_container_index = 0
-    def __init__(self, screen, market, width, height, hp, dmg, cost, snapbox, scope, type, hasfront):
+    def __init__(self, screen, market, width, height, hp, dmg, cost, snapbox, scope, type, has_front, front_img=False):
 
         self.market = market
         self.screen = screen
@@ -20,7 +20,8 @@ class Defense:
         self.selected = False
         self.scope = scope
         self.othertypes = [] #3rd category
-        self.hasfront = hasfront
+        self.front_img = front_img
+        self.hasfront = has_front
         self.container_index = None
 
                 
@@ -62,9 +63,8 @@ class Defense:
         button_y = defense_rect.bottom + 10
         return pygame.Rect(button_x, button_y, button_width, button_height)
 
-    def draw(self):
-        print(f"Drawing defense at index {self.container_index}")
-
+    def draw(self, front_img):
+        
         if self.selected and self.type == "default":
             sell_button_rect = self.get_sell_button_rect()
             pygame.draw.rect(self.screen, (200, 0, 0), sell_button_rect)
@@ -75,9 +75,14 @@ class Defense:
 
         if isinstance(self, Defense) and economy.balance >= self.cost:
             self.draw()
+            if self.hasfront == True and self.front_img == True:
+                
+                self.draw_front_img()
         else:
             darkness_filter = self.copy()
             dark_surface = pygame.Surface(darkness_filter.get_size(), pygame.SRCALPHA)
             dark_surface.fill((0, 0, 0, 128))  # 50% transparent black
             darkness_filter.blit(dark_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
             self.screen.blit(darkness_filter, self.rect)
+
+
