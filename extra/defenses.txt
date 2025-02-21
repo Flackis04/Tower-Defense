@@ -7,3 +7,6 @@ blue squared banana farm
 #48-52px
 #Mortar! lila netherportal mortar
 #mariostar
+random noise map generation w elevation
+smooth rotation for pipe, barrier, ball, 
+smooth innåt för market

@@ -11,6 +11,7 @@ import defenses.mortar as mortar
 import defenses.cannon as cannon
 from defenses.defense import Defense
 from effects import get_flash_instance, get_invalid_placement_flash_instance
+import formulas
 
 class Marketbtn:
     def __init__(
@@ -184,10 +185,14 @@ class Market:
         screen_width, screen_height = screen.get_size()
         self.path_points = path.generate_path_points(screen_width, screen_height)
 
+
+        self.start_time = None
+        self.is_animating = False
+
         self.make_pin_btn()
         self.make_tab_btns()
         self.setup_inventory()
-        self.make_containers()
+        self.make_containers() #FIXX SO IT GETS USED
 
 
     def setup_inventory(self):
@@ -199,13 +204,12 @@ class Market:
     def make_containers(self):
         # Get grid positions for all containers (row, col tuples).
         self.all_container_indices = [(r, c) for r in range(self.num_rows) for c in range(self.num_cols)]
-        num_categories = len(self.tab_btns)
         # Divide the total containers among categories (using ceiling division).
-        containers_per_tab = math.ceil(len(self.all_container_indices) / num_categories)
+        containers_per_tab = math.ceil(len(self.all_container_indices) / len(self.defensetypes))
         self.containers_by_tab = {}
         self.containers_all = []
         container_id = 0
-        for cat in range(num_categories):
+        for cat in range(len(self.defensetypes)):
             self.containers_by_tab[cat] = []
             for i in range(containers_per_tab):
                 idx = cat * containers_per_tab + i
@@ -250,9 +254,8 @@ class Market:
             )
             self.tab_btns.append(btn)
         return self.tab_btns
-
-    def draw_defenses_for_tab(self, tab_index):
-        # Set the current tab type
+    
+    def get_filtered_defenses(self, tab_index):
         self.tab_type = self.defensetypes[tab_index]
         
         # Filter defenses that belong to the current tab
@@ -261,25 +264,40 @@ class Market:
         if not filtered_defenses:
             for defense in self.defenselist:
                 if defense.type == self.tab_type[2]:
-                    print(self.tab_type[2])
                     filtered_defenses.append(defense)
         
         self.set_container_index(filtered_defenses)
-        
-        for defense in filtered_defenses:
-            center = self.get_container_center(defense.container_index)
-            defense.pos = center
-            defense.front_img = True
-            defense.draw()
-            if getattr(defense, "hasfront", False) and getattr(defense, "front_img", False):
-                defense.draw_front_img()
-
+        return filtered_defenses
+    
     def set_container_index(self, defenses):
         # Reset the counter and assign indices for the given list of defenses
         Defense.local_container_index = 0
         for defense in defenses:
             defense.container_index = Defense.local_container_index
             Defense.local_container_index += 1
+
+    def draw_defenses_for_tab(self, filtered_defenses):
+        
+        for defense in filtered_defenses:
+            print("filtered defenses", filtered_defenses)
+            print("set container index", Defense.local_container_index)
+            defense.pos = self.get_container_rect(defense.container_index).center
+            defense.front_img = True
+            defense.draw()
+            if getattr(defense, "hasfront", False) and getattr(defense, "front_img", False):
+                defense.draw_front_img()
+
+    def get_container_drag_initiation(self, event, tab_index):
+        for defense in self.get_filtered_defenses(tab_index):
+            container_rect = self.get_container_rect(defense.container_index)
+            if container_rect.collidepoint(event.pos):
+                # Check which defense is being clicked based on the active tab btn
+                if self.focused_btn == self.tab_btns[tab_index]:
+                    if economy.balance >= defense.cost:
+                        self.dragging_item = defense
+                    else:
+                        flash = get_flash_instance()
+                        flash.trigger()
 
 
     def handle_dragging(self, defense):
@@ -318,7 +336,7 @@ class Market:
         else:
             flash.stop()
     
-    def get_container_rect(self, tab_index):
+    def get_container_rect(self, container_index): #local container index instead
         # Calculate the total grid dimensions.
         grid_width = self.num_cols * self.container_size + (self.num_cols + 1) * self.gap
         grid_height = self.num_rows * self.container_size + (self.num_rows + 1) * self.gap
@@ -329,43 +347,18 @@ class Market:
         start_y = self.rect.y + (self.rect.height - grid_height) // 2 + vertical_offset
 
         # Determine the row and column based on the tab index.
-        row = tab_index // self.num_cols
-        col = tab_index % self.num_cols
+        if container_index % 2 == 0:
+            row = container_index // 2
+            col = 0
+        else:
+            row = (container_index - 1) // 2
+            col = 1
 
         # Calculate the x and y coordinates for the container.
         container_x = start_x + self.gap + col * (self.container_size + self.gap)
         container_y = start_y + self.gap + row * (self.container_size + self.gap)
 
         return pygame.Rect(container_x, container_y, self.container_size, self.container_size)
-
-    def get_container_center(self, tab_index):
-        """
-        Returns the (x, y) coordinates for the center of the container (tab)
-        specified by its index.
-        """
-        rect = self.get_container_rect(tab_index)
-        return rect.center
-    
-    def get_container_drag_initiation(self, event):
-        for container in self.containers_all:
-                container_rect = self.get_container_rect(container.id)
-                if container_rect.collidepoint(event.pos) and container.defense is None:
-                    # Check which defense is being clicked based on the active tab btn
-                    if self.focused_btn == self.tab_btns[0]:
-                        # For Cannon (cost: 1000)
-                        if economy.balance >= 1000:
-                            self.dragging_item = cannon.Cannon(self.screen, self)
-                        else:
-                            flash = get_flash_instance()
-                            flash.trigger()
-                    elif self.focused_btn == self.tab_btns[2]:
-                        # For barrier (cost: 500)
-                        if economy.balance >= 500:
-                            self.dragging_item = barrier.Barrier(self.screen, self)
-                        else:
-                            flash = get_flash_instance()
-                            flash.trigger()
-                    break
 
 
     def distance_to_segment(self, point, start, end):
@@ -502,11 +495,11 @@ class Market:
     def place_item(self, event):
         """Handles placing an item when the user releases the mouse btn."""
         if self.dragging_item:
-            drop_point = event.pos
+            self.drop_point = event.pos
             
-            if self.is_placeable(drop_point, self.dragging_item):
-                snapped_point = self.snap_point_to_path(drop_point)
-                final_point = snapped_point if snapped_point is not None else drop_point
+            if self.is_placeable(self.drop_point, self.dragging_item):
+                snapped_point = self.snap_point_to_path(self.drop_point)
+                final_point = snapped_point if snapped_point is not None else self.drop_point
                 
                 self.dragging_item.pos = final_point
                 self.placed_defenses.append(self.dragging_item)
@@ -528,13 +521,12 @@ class Market:
             if self.is_active:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if self.rect.collidepoint(event.pos): #HERE
-                        self.get_container_drag_initiation(event)
+                        self.get_container_drag_initiation(event, self.tab_index)
                     elif not self.market_is_pinned and not self.rect.collidepoint(event.pos) and self.is_active:
                         self.toggle()
                         self.focused_btn = None
                 elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                     if self.dragging_item:
-                        self.is_ghost_active = False
                         self.place_item(event)
 
         # Update tab btns and market open state.
@@ -556,6 +548,15 @@ class Market:
     def draw(self, screen, cached_mouse_pos):
         """Called each frame to KEEP updated market UI on display."""
 
+        if self.is_animating:
+            current_time = pygame.time.get_ticks() - self.start_time  # Calculate elapsed time
+            distance = self.rect.width  # Move its own width to the right
+            self.rect.x = self.screen.get_size()[0] - self.rect.width + formulas.ease_out_expo(current_time, 0, distance, 1000)  # Update position
+            
+            # Check if the animation is complete
+            if current_time >= 1000:  # Assuming the animation lasts 1000 ms
+                self.is_animating = False  # Stop the animation
+
         # Draw defenses for the currently focused tab (based on the focused btn)
         if self.is_active:
             #Drawing
@@ -564,8 +565,7 @@ class Market:
                 self.tab_index = 0
             if not self.is_ghost_active:
                 pygame.draw.rect(screen, self.current_color, self.rect)
-                num_containers = self.num_cols * self.num_rows
-                for container_index in range(num_containers):
+                for container_index in range(len(self.get_filtered_defenses(self.tab_index))):
                     container_rect = self.get_container_rect(container_index)
                     pygame.draw.rect(screen, (15, 15, 15), container_rect, border_radius=12)
                 for btn in self.tab_btns:
@@ -583,8 +583,10 @@ class Market:
                         self.pin_btn_pressed = False
                     self.pin_btn.current_color = (255, 255, 255) if self.market_is_pinned else (150, 150, 150)
                 focused_tab_index = self.tab_btns.index(self.focused_btn)
-                self.tab_type = self.defensetypes[focused_tab_index]    
-                self.draw_defenses_for_tab(focused_tab_index)
+                self.tab_type = self.defensetypes[focused_tab_index]  #behövs?
+                self.get_filtered_defenses(focused_tab_index)
+                self.draw_defenses_for_tab(self.get_filtered_defenses(focused_tab_index))
+                
             #Logic 
             if self.dragging_item:
                 self.handle_dragging(self.dragging_item)
@@ -607,6 +609,10 @@ class Market:
         """Toggles the market state (open/close)."""
         self.is_active = not self.is_active
         self.btn_is_active = not self.btn_is_active
+
+        if self.is_active:
+            self.start_time = pygame.time.get_ticks()  # Record the start time
+            self.is_animating = True  # Start animation when opening the market
         # No action required
 def make_market(screen, width=175, height=450):
     return Market(screen, width=width, height=height)

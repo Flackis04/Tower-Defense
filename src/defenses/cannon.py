@@ -5,14 +5,13 @@ import economy  # for refunding when selling
 import defenses.defense as defense
 
 class Cannon(defense.Defense):
-    def __init__(self, screen, market, width=4, height=4, hp=250, dmg=1, cost=5000, snapbox=35, scope=400, type="default", has_front=False, front_img=False):
+    def __init__(self, screen, market, width=4, height=4, hp=250, dmg=1, cost=1000, snapbox=35, scope=400, type="default", has_front=False, front_img=False):
         super().__init__(screen, market, width, height, hp, dmg, cost, snapbox, scope, type, has_front, front_img)
         self.cannon_base = pygame.image.load("assets/cannon/base.png").convert_alpha()
         self.cannon_pipe = pygame.image.load("assets/cannon/pipe.png").convert_alpha()
         self.cannon_pipe_original = self.cannon_pipe.copy()
-        self.center = self.market.get_container_center(0)
-        self.base_rect = self.cannon_base.get_rect(center=self.center)
-        self.pipe_rect = self.cannon_pipe.get_rect(center=self.center)
+        self.base_rect = self.cannon_base.get_rect(center=(self.width // 2, self.height // 2))
+        self.pipe_rect = self.cannon_pipe.get_rect(center=(self.width // 2, self.height // 2))
         original_pipe = self.cannon_pipe_original.copy()
         pipe_width, pipe_height = original_pipe.get_size()
         offset_surface = pygame.Surface((pipe_width, pipe_height), pygame.SRCALPHA)

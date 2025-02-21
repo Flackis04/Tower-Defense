@@ -1,1 +1,1 @@
-balance = 2500
+balance = 250000

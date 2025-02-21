@@ -9,6 +9,7 @@ def main():
     pygame.init()
     screen = pygame.display.set_mode((800, 600))
     width, height = screen.get_size()
+    bg_image = pygame.image.load("assets/smooth_noise_bg.png")
     pygame.display.set_caption("Tower Defense")
     clock = pygame.time.Clock()
 
@@ -60,6 +61,8 @@ def main():
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_j:
                 running = False
 
+        screen.blit(bg_image, (0, 0))
+
         # Cache the mouse position for use in update and draw calls.
         cached_mouse_pos = pygame.mouse.get_pos()
 
@@ -80,7 +83,6 @@ def main():
         new_enemies = enemy_spawner.update(dt)
         enemies_list.extend(new_enemies)
 
-        screen.fill((0, 0, 0))
         # Generate and draw the path polygon.
         path_polygon = path.get_path_polygon(path_points, 25)
         pygame.draw.polygon(screen, (45,45,45), path_polygon)
@@ -89,7 +91,7 @@ def main():
         defenses_to_remove = []
 
         for defense in market_instance.placed_defenses:
-            if isinstance(defense, defenses.cannon.Cannon) and defense.pos is not None:
+            if isinstance(defense, defenses.cannon.Cannon) and defense.pos == market.drop_point:
                 defense.aim_at_enemy()
                 for event in event_list:
                     defense.handle_event(event, cached_mouse_pos)
