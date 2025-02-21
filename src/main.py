@@ -2,7 +2,7 @@ import pygame
 import sys
 import os
 import enemies, path, market, defenses.cannon, defenses.barrier as barrier, constants, economy, text, spawner
-from effects import initialize_flash, get_flash_instance, initialize_invalid_placement_flash, get_invalid_placement_flash_instance
+from effects import initialize_flash, initialize_invalid_placement_flash
 
 def main():
 
@@ -24,7 +24,7 @@ def main():
 
     market_instance = market.make_market(screen)
     market_btn = market.make_market_btn(screen, market_instance)
-    market_instance.enemies_list = enemies_list
+    enemies_list = enemies.make_enemies(screen)
 
 
     balance_display = text.Balance_Display(screen)
@@ -91,7 +91,7 @@ def main():
         defenses_to_remove = []
 
         for defense in market_instance.placed_defenses:
-            if isinstance(defense, defenses.cannon.Cannon) and defense.pos == market.drop_point:
+            if isinstance(defense, defenses.cannon.Cannon):
                 defense.aim_at_enemy()
                 for event in event_list:
                     defense.handle_event(event, cached_mouse_pos)
@@ -145,11 +145,6 @@ def main():
 
         if market_instance.btn_is_active:
             market_btn.draw(screen)
-
-
-        flash = get_flash_instance()
-        flash.update()
-        flash.draw()
 
         balance_display.update()
         balance_display.draw()

@@ -1,5 +1,5 @@
 import pygame
-import market as market
+import enemies
 import math
 import economy  # for refunding when selling
 import defenses.defense as defense
@@ -10,21 +10,22 @@ class Cannon(defense.Defense):
         self.cannon_base = pygame.image.load("assets/cannon/base.png").convert_alpha()
         self.cannon_pipe = pygame.image.load("assets/cannon/pipe.png").convert_alpha()
         self.cannon_pipe_original = self.cannon_pipe.copy()
-        self.base_rect = self.cannon_base.get_rect(center=(self.width // 2, self.height // 2))
-        self.pipe_rect = self.cannon_pipe.get_rect(center=(self.width // 2, self.height // 2))
+        self.base_rect = self.cannon_base.get_rect(center=self.get_rect().center)
+        self.pipe_rect = self.cannon_pipe.get_rect(center=self.get_rect().center)
         original_pipe = self.cannon_pipe_original.copy()
         pipe_width, pipe_height = original_pipe.get_size()
         offset_surface = pygame.Surface((pipe_width, pipe_height), pygame.SRCALPHA)
         # IMPORTANT: blit the original pipe image onto the offset surface
         offset_surface.blit(original_pipe, (0, 0))
         self.pos = None
+        self.enemies = enemies.make_enemies(screen)
 
 
     def get_distance(self, pos1, pos2):
         return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
     
     def get_closest_enemy(self):
-        enemies = self.market.enemies_list
+        enemies = self.enemies
         closest_enemy = None
         scope_distance = self.scope
         for enemy in enemies:

@@ -6,12 +6,16 @@ class InsufficientFundsFlash:
         self.width, self.height = screen.get_size()
         self.is_active = False
         self.start_time = 0
-        self.duration = 400
+        self.duration = 750
 
     def trigger(self):
         self.is_active = True
         self.start_time = pygame.time.get_ticks()
         print("Triggering, is_active:", self.is_active)
+
+    def stop(self):
+        self.is_active = False
+        self.alpha = 0
 
     def update(self):
         if self.is_active:
@@ -29,7 +33,7 @@ class InsufficientFundsFlash:
             elapsed = current_time - self.start_time
 
             if elapsed < self.duration:
-                alpha = 60 * (self.duration - elapsed) / self.duration
+                alpha = 30 * (self.duration - elapsed) / self.duration
                 overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)  # Use SRCALPHA for transparency
                 overlay.fill((255, 0, 0))  # Fill with red
                 overlay.set_alpha(int(alpha))  # Set the alpha value
@@ -80,6 +84,8 @@ class InvalidPlacementFlash:
                 self.alpha = int(60 * (elapsed_time / self.fade_duration))
             else:
                 self.alpha = 60
+            if self.is_active and not self.is_dragging:
+                self.alpha = int(60 * (self.fade_duration / self.elapsed_time))  # Stop the flash if the item is placed down
 
     def draw(self):
         if self.is_active and self.is_dragging:

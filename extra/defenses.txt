@@ -10,3 +10,5 @@ blue squared banana farm
 random noise map generation w elevation
 smooth rotation for pipe, barrier, ball, 
 smooth innåt för market
+sellbutton in menu + display scope when secelcted
+dark filter

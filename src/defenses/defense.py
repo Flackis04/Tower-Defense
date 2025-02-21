@@ -30,7 +30,7 @@ class Defense:
             x, y = self.pos
         else:
             # Use a default container center (here, container 2) if no position was set.
-            x, y = self.market.get_container_center(2)
+            x, y = self.market.get_container_center(6)
         if self.angle == 90:
             w, h = self.height, self.width
         else:
@@ -72,17 +72,6 @@ class Defense:
             text_surface = sell_font.render("Sell", True, (255, 255, 255))
             text_rect = text_surface.get_rect(center=sell_button_rect.center)
             self.screen.blit(text_surface, text_rect)
-
-        if isinstance(self, Defense) and economy.balance >= self.cost:
-            self.draw()
-            if self.hasfront == True and self.front_img == True:
-                self.draw_front_img()
-        else:
-            darkness_filter = self.copy()
-            dark_surface = pygame.Surface(darkness_filter.get_size(), pygame.SRCALPHA)
-            dark_surface.fill((0, 0, 0, 128))  # 50% transparent black
-            darkness_filter.blit(dark_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-            self.screen.blit(darkness_filter, self.rect)
 
 #Big ball cannon!
 #vind

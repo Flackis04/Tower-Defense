@@ -1,6 +1,8 @@
 import pygame
 import bisect
 
+enemies_list = []
+
 class Enemy:
     tier_to_color = {
         1: (255, 0, 0),       # red
@@ -76,3 +78,8 @@ class Enemy:
 
     def draw(self):
         pygame.draw.circle(self.screen, self.color, (int(self.posx), int(self.posy)), self.radius, 5)
+
+def make_enemies(screen):
+    enemies_list = []
+    return enemies_list
+

@@ -16,7 +16,6 @@ class Barrier(defense.Defense):
         offset_surface = pygame.Surface((barrier_width, barrier_height), pygame.SRCALPHA)
         offset_surface.blit(original_barrier, (0, 0))
         self.pos = None
-        self.market = market
 
     
     def ondrag(self, mouse_pos):

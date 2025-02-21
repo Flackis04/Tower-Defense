@@ -42,7 +42,7 @@ class Marketbtn:
         self.hovering = False
 
     def draw(self, surface):
-        pygame.draw.rect(
+        pygame.draw.rect( 
             surface, self.current_color, self.rect, border_radius=self.border_radius
         )
         text_surface = self.font.render(self.text, True, self.text_color)
@@ -121,6 +121,11 @@ class Market:
         # Initialize basic attributes
         self.screen = screen
         self.rect = pygame.Rect(x, y, width, height)
+        self.market_has_been_opened = False
+        self.tab_index = 0
+        self.new_flash = get_flash_instance()
+        self.invalid_placement_flash = get_invalid_placement_flash_instance()
+
 
         # Containers for the grid layout
         self.num_cols = 2
@@ -193,6 +198,9 @@ class Market:
         self.make_tab_btns()
         self.setup_inventory()
         self.make_containers() #FIXX SO IT GETS USED
+        self.draw_defenses(screen)
+
+    
 
 
     def setup_inventory(self):
@@ -253,6 +261,8 @@ class Market:
                 color=self.non_focus_color,
             )
             self.tab_btns.append(btn)
+        if self.market_has_been_opened == False:
+            self.focused_btn = self.tab_btns[0]
         return self.tab_btns
     
     def get_filtered_defenses(self, tab_index):
@@ -277,11 +287,10 @@ class Market:
             Defense.local_container_index += 1
 
     def draw_defenses_for_tab(self, filtered_defenses):
-        
         for defense in filtered_defenses:
-            print("filtered defenses", filtered_defenses)
-            print("set container index", Defense.local_container_index)
-            defense.pos = self.get_container_rect(defense.container_index).center
+            # Only update the position if the defense hasn't been placed yet.
+            if defense not in self.placed_defenses and self.is_active:
+                defense.pos = self.get_container_rect(defense.container_index).center
             defense.front_img = True
             defense.draw()
             if getattr(defense, "hasfront", False) and getattr(defense, "front_img", False):
@@ -296,6 +305,12 @@ class Market:
                     if economy.balance >= defense.cost:
                         self.dragging_item = defense
                     else:
+                        dark_surface = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
+                        dark_surface.fill((0, 0, 0, 128))  # 50% transparent black
+
+                        # Draw the semi-transparent dark overlay
+                        self.screen.blit(dark_surface, (0, 0))
+
                         flash = get_flash_instance()
                         flash.trigger()
 
@@ -330,11 +345,11 @@ class Market:
             defense.draw()
 
         # Validate placement (flash if invalid)
-        flash = get_invalid_placement_flash_instance()
+        invalid_placement_flash = get_invalid_placement_flash_instance()
         if not self.is_placeable(defense.pos, defense) and not self.rect.collidepoint(defense.pos):
-            flash.trigger()
+            invalid_placement_flash.trigger()
         else:
-            flash.stop()
+            invalid_placement_flash.stop()
     
     def get_container_rect(self, container_index): #local container index instead
         # Calculate the total grid dimensions.
@@ -359,7 +374,14 @@ class Market:
         container_y = start_y + self.gap + row * (self.container_size + self.gap)
 
         return pygame.Rect(container_x, container_y, self.container_size, self.container_size)
-
+    
+    def get_container_center(self, category_index):
+        """
+        Returns the (x, y) coordinates for the center of the container (category)
+        specified by its index.
+        """
+        rect = self.get_container_rect(category_index)
+        return rect.center
 
     def distance_to_segment(self, point, start, end):
         # Compute the distance from a point to a line segment (start to end)
@@ -493,26 +515,35 @@ class Market:
         return not near_path  # Other defenses must be placed away from the path
 
     def place_item(self, event):
-        """Handles placing an item when the user releases the mouse btn."""
+
+        """Handles placing an item when the user releases the mouse button."""
         if self.dragging_item:
             self.drop_point = event.pos
-            
+            print("drop point", self.drop_point)
+
             if self.is_placeable(self.drop_point, self.dragging_item):
                 snapped_point = self.snap_point_to_path(self.drop_point)
                 final_point = snapped_point if snapped_point is not None else self.drop_point
+                print("final point", final_point)
+
+                # Create a NEW instance instead of modifying the market's version
+                placed_defense = type(self.dragging_item)(
+                    self.screen, self  # Use the same constructor
+                )
+                placed_defense.pos = final_point  # Set position to the placed location
                 
-                self.dragging_item.pos = final_point
-                self.placed_defenses.append(self.dragging_item)
+                self.placed_defenses.append(placed_defense)  # Store the placed defense
                 economy.balance -= self.dragging_item.cost  # Deduct cost
-                            
+                                
             # Stop invalid placement flash
-            flash = get_invalid_placement_flash_instance()
-            flash.stop()
+            invalid_placement_flash = get_invalid_placement_flash_instance()
+            invalid_placement_flash.stop()
             
             self.is_ghost_active = False
 
-            # Reset dragging item
+            # Reset dragging item without removing it from the market
             self.dragging_item = None
+
 
 
     def update(self, events):
@@ -524,7 +555,6 @@ class Market:
                         self.get_container_drag_initiation(event, self.tab_index)
                     elif not self.market_is_pinned and not self.rect.collidepoint(event.pos) and self.is_active:
                         self.toggle()
-                        self.focused_btn = None
                 elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                     if self.dragging_item:
                         self.place_item(event)
@@ -560,9 +590,6 @@ class Market:
         # Draw defenses for the currently focused tab (based on the focused btn)
         if self.is_active:
             #Drawing
-            if not self.focused_btn:
-                self.focused_btn = self.tab_btns[0]
-                self.tab_index = 0
             if not self.is_ghost_active:
                 pygame.draw.rect(screen, self.current_color, self.rect)
                 for container_index in range(len(self.get_filtered_defenses(self.tab_index))):
@@ -590,10 +617,17 @@ class Market:
             #Logic 
             if self.dragging_item:
                 self.handle_dragging(self.dragging_item)
-            flash = get_invalid_placement_flash_instance()
-            flash.update()  
-            flash.draw()
+            # Update the active flash reference to the new flash
+            self.flash = self.new_flash
+            if self.flash and self.flash.is_active and self.flash != self.new_flash:
+                self.flash.stop()
 
+            # Now update and draw the flash
+            self.flash.update()
+            self.flash.draw()
+            self.invalid_placement_flash.update()
+            self.invalid_placement_flash.draw()
+            
     def draw_defenses(self, screen):
         """
         Draws all placed defenses so they remain visible regardless
@@ -607,6 +641,7 @@ class Market:
 
     def toggle(self):
         """Toggles the market state (open/close)."""
+        self.market_has_been_opened = True
         self.is_active = not self.is_active
         self.btn_is_active = not self.btn_is_active
 
