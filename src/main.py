@@ -1,7 +1,7 @@
 import pygame
 import sys
 import os
-import enemies, path, market, defenses.cannon, defenses.barrier as barrier, constants, economy, text, spawner
+import enemies, path.pathgen, market, defenses.cannon, defenses.barrier as barrier, constants, economy, text, spawner
 from effects import initialize_flash, initialize_invalid_placement_flash
 
 def main():
@@ -16,25 +16,28 @@ def main():
     initialize_flash(screen)
     initialize_invalid_placement_flash(screen)
 
-    path_points = path.generate_path_points(width, height)
+    path_points = path.pathgen.generate_path_points(width, height)
     # Precompute cumulative distances along the path for constant speed progression.
-    cumulative_lengths = path.cumulative_distances(path_points)
+    cumulative_lengths = path.pathgen.cumulative_distances(path_points)
 
-    enemies_list = []
+    
+    enemies_list = enemies.make_enemies(screen)
+    
+    # Create the enemy spawner BEFORE the main loop.
+    enemy_spawner = spawner.EnemySpawner(screen, path_points, cumulative_lengths)
+
 
     market_instance = market.make_market(screen)
     market_btn = market.make_market_btn(screen, market_instance)
-    enemies_list = enemies.make_enemies(screen)
+
 
 
     balance_display = text.Balance_Display(screen)
 
     # Create a defense instance using market_instance
-    barrier_defense = barrier.Barrier(screen, market_instance)
+    barrier_defense = barrier.Barrier(screen, market_instance, enemies_list)
 
     # Create an enemy spawner instance (using our BloonTD6-style spawner)
-    enemy_spawner = spawner.EnemySpawner(screen, path_points, cumulative_lengths)
-
     # Initialize the player's health.
     player_hp = 50
     game_over = False
@@ -63,6 +66,11 @@ def main():
 
         screen.blit(bg_image, (0, 0))
 
+        new_enemies = enemy_spawner.update(dt)
+        enemies_list.extend(new_enemies)
+
+
+
         # Cache the mouse position for use in update and draw calls.
         cached_mouse_pos = pygame.mouse.get_pos()
 
@@ -79,12 +87,8 @@ def main():
             market_instance.toggle()
             market_instance.is_active = False
 
-        # Update enemy spawner and add any newly spawned enemies.
-        new_enemies = enemy_spawner.update(dt)
-        enemies_list.extend(new_enemies)
-
         # Generate and draw the path polygon.
-        path_polygon = path.get_path_polygon(path_points, 25)
+        path_polygon = path.pathgen.get_path_polygon(path_points, 25)
         pygame.draw.polygon(screen, (45,45,45), path_polygon)
 
         enemies_to_remove = []

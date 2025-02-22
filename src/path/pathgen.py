@@ -66,6 +66,7 @@ def generate_path_points(width, height, step_size=5, default_radius=50, points_p
     the anchors (and subsequently through the midpoints).
     """
     start = (0 - default_radius, int(height * 0.125))
+    generate_path_points.start = start
     end = (width, int(height * 0.875))
     dy = end[1] - start[1]
     anchors = [

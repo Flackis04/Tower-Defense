@@ -5,8 +5,8 @@ import economy  # for refunding when selling
 import defenses.defense as defense
 
 class Mortar(defense.Defense):
-    def __init__(self, screen, market, width=4, height=4, hp=300, dmg=3, cost=5000, snapbox=35, scope=300, type="default", has_front=False, front_img=False):
-        super().__init__(screen, market, width, height, hp, dmg, cost, snapbox, scope, type, has_front, front_img)
+    def __init__(self, screen, market, enemy_list, width=4, height=4, hp=300, dmg=3, cost=5000, snapbox=35, scope=300, type="default", has_front=False, front_img=False):
+        super().__init__(screen, market, enemy_list, width, height, hp, dmg, cost, snapbox, scope, type, has_front, front_img)
         self.mortar_image = pygame.image.load("assets/mortar/mortar.png").convert_alpha()
         self.rect = self.mortar_image.get_rect(center=(self.width // 2, self.height // 2))
         self.pos = None

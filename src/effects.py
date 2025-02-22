@@ -76,16 +76,20 @@ class InvalidPlacementFlash:
         self.alpha = 0
 
     def update(self):
-        if self.is_active:
-            current_time = pygame.time.get_ticks()
-            elapsed_time = current_time - self.start_time
-
-            if elapsed_time < self.fade_duration:
-                self.alpha = int(60 * (elapsed_time / self.fade_duration))
-            else:
-                self.alpha = 60
-            if self.is_active and not self.is_dragging:
-                self.alpha = int(60 * (self.fade_duration / self.elapsed_time))  # Stop the flash if the item is placed down
+            print("Dragging:", self.is_dragging)
+            if self.is_active:
+                current_time = pygame.time.get_ticks()
+                
+                if self.is_dragging:
+                    # Reset the fade-out timer when dragging resumes.
+                    self.fadeout_start_time = None
+                    elapsed_time = current_time - self.start_time
+                    if elapsed_time < self.fade_duration:
+                        self.alpha = int(60 * (elapsed_time / self.fade_duration))
+                    else:
+                        self.alpha = 60
+                        if not self.is_dragging:
+                            self.stop()
 
     def draw(self):
         if self.is_active and self.is_dragging:

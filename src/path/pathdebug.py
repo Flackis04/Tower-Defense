@@ -1,5 +1,5 @@
 import pygame
-import path
+import pathgen
 
 def display_path_points(screen, path_points, radius=3):
     """
@@ -12,7 +12,7 @@ def display_polygon(screen, path_points, width):
     """
     Draw the path polygon with a constant width.
     """
-    polygon_points = path.get_path_polygon(path_points, width)
+    polygon_points = pathgen.get_path_polygon(path_points, width)
     pygame.draw.polygon(screen, (0, 255, 0), polygon_points, width=2)
 
 # Assuming `screen` is your Pygame display surface
@@ -25,7 +25,7 @@ def main():
 
     # Generate path points
     width, height = 800, 600
-    path_points = path.generate_path_points(width, height)
+    path_points = pathgen.generate_path_points(width, height)
 
     while True:
         screen.fill((0, 0, 0))  # Fill the screen with black

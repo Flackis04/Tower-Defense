@@ -5,36 +5,32 @@ import economy  # for refunding when selling
 import defenses.defense as defense
 
 class Cannon(defense.Defense):
-    def __init__(self, screen, market, width=4, height=4, hp=250, dmg=1, cost=1000, snapbox=35, scope=400, type="default", has_front=False, front_img=False):
-        super().__init__(screen, market, width, height, hp, dmg, cost, snapbox, scope, type, has_front, front_img)
-        self.cannon_base = pygame.image.load("assets/cannon/base.png").convert_alpha()
-        self.cannon_pipe = pygame.image.load("assets/cannon/pipe.png").convert_alpha()
+    def __init__(self, screen, market, enemy_list, width=4, height=4, hp=250, dmg=1, cost=1000, snapbox=35, scope=400, type="default", has_front=False, front_img=False):
+        super().__init__(screen, market, enemy_list, width, height, hp, dmg, cost, snapbox, scope, type, has_front, front_img)
+        self.cannon_base = pygame.image.load("assets/cannon/base3.png").convert_alpha()
+        self.cannon_pipe = pygame.image.load("assets/cannon/pipe3.png").convert_alpha()
         self.cannon_pipe_original = self.cannon_pipe.copy()
         self.base_rect = self.cannon_base.get_rect(center=self.get_rect().center)
         self.pipe_rect = self.cannon_pipe.get_rect(center=self.get_rect().center)
-        original_pipe = self.cannon_pipe_original.copy()
-        pipe_width, pipe_height = original_pipe.get_size()
-        offset_surface = pygame.Surface((pipe_width, pipe_height), pygame.SRCALPHA)
-        # IMPORTANT: blit the original pipe image onto the offset surface
-        offset_surface.blit(original_pipe, (0, 0))
-        self.pos = None
-        self.enemies = enemies.make_enemies(screen)
+        self.pos = self.get_rect().center  # Set the cannon's position
+
+
 
 
     def get_distance(self, pos1, pos2):
         return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
     
     def get_closest_enemy(self):
-        enemies = self.enemies
         closest_enemy = None
         scope_distance = self.scope
-        for enemy in enemies:
+        # Reference the global enemy list from the enemies module
+        for enemy in enemies.enemies_list:
             distance = self.get_distance(self.pos, enemy.get_position())
             if distance < scope_distance:
                 scope_distance = distance
                 closest_enemy = enemy
         return closest_enemy
-    
+
     def get_angle_to(self, enemy):
         dx = enemy.posx - self.pos[0]
         dy = enemy.posy - self.pos[1]
@@ -50,6 +46,8 @@ class Cannon(defense.Defense):
         else:
             self.angle = 0
             self.cannon_pipe = self.cannon_pipe_original.copy()
+
+        
     
     def draw(self):
         if hasattr(self, 'pos') and self.pos is not None:
@@ -58,3 +56,6 @@ class Cannon(defense.Defense):
             self.pipe_rect = self.cannon_pipe.get_rect(center=self.pos)
             self.screen.blit(self.cannon_base, self.base_rect)
             self.screen.blit(self.cannon_pipe, self.pipe_rect)
+
+class Projectile()
+    

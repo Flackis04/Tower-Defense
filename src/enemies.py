@@ -80,6 +80,7 @@ class Enemy:
         pygame.draw.circle(self.screen, self.color, (int(self.posx), int(self.posy)), self.radius, 5)
 
 def make_enemies(screen):
+    global enemies_list
     enemies_list = []
     return enemies_list
 

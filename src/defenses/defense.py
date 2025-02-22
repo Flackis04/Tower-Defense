@@ -4,8 +4,8 @@ import economy
 class Defense:
 
     local_container_index = 0
-    def __init__(self, screen, market, width, height, hp, dmg, cost, snapbox, scope, type, has_front, front_img=False):
-
+    def __init__(self, screen, market, enemy_list, width, height, hp, dmg, cost, snapbox, scope, type, has_front, front_img=False):
+        self.enemies_list = enemy_list
         self.market = market
         self.screen = screen
         self.hp = hp

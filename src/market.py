@@ -4,7 +4,7 @@ import economy
 import config  # configuration file for drag-and-drop settings
 import math
 import time
-import path  # used to generate the path points
+import path.pathgen  # used to generate the path points
 import defenses.barrier as barrier
 import defenses.defense as defense
 import defenses.mortar as mortar
@@ -12,6 +12,7 @@ import defenses.cannon as cannon
 from defenses.defense import Defense
 from effects import get_flash_instance, get_invalid_placement_flash_instance
 import formulas
+import enemies
 
 class Marketbtn:
     def __init__(
@@ -165,14 +166,14 @@ class Market:
         # Defense-related attributes
         self.defensetypes = defensetypes
         self.defenselist = [
-            cannon.Cannon(self.screen, market=self),
-            barrier.Barrier(self.screen, market=self),
-            mortar.Mortar(self.screen, market=self)
+            cannon.Cannon(self.screen, market=self, enemy_list=enemies.enemies_list),
+            barrier.Barrier(self.screen, market=self, enemy_list=enemies.enemies_list),
+            mortar.Mortar(self.screen, market=self, enemy_list=enemies.enemies_list)
         ]
 
         # Temporary defense object (possibly for previewing or ghosting)
         self.temp_defense = defense.Defense(
-            self.screen, market=self, width=0, height=0, hp=0, dmg=0, cost=0,
+            self.screen, market=self, enemy_list=enemies.enemies_list, width=0, height=0, hp=0, dmg=0, cost=0,
             snapbox=0, type="default", scope=0, has_front=False, front_img=False
         )
 
@@ -188,7 +189,7 @@ class Market:
 
                 # Pre-calculate the path points using the current screen dimensions.
         screen_width, screen_height = screen.get_size()
-        self.path_points = path.generate_path_points(screen_width, screen_height)
+        self.path_points = path.pathgen.generate_path_points(screen_width, screen_height)
 
 
         self.start_time = None
@@ -334,16 +335,9 @@ class Market:
         near_path = self.is_near_path(mouse_pos, tolerance=20)
 
         if near_path and isinstance(defense, barrier.Barrier):
-            # If near the path, update orientation and rotate the defense.
-            self.orientation, _ = self.get_continuous_path_orientation(mouse_pos)
-            # Set new angle: if orientation is non-vertical, rotate 90°, otherwise 0°.
-            new_angle = 90 if self.orientation != "vertical" else 0
-            defense.last_angle = new_angle  # Save this as the last rotation value.
-            defense.angle = new_angle
             defense.ondrag(mouse_pos)
         else:
             defense.draw()
-
         # Validate placement (flash if invalid)
         invalid_placement_flash = get_invalid_placement_flash_instance()
         if not self.is_placeable(defense.pos, defense) and not self.rect.collidepoint(defense.pos):
@@ -528,17 +522,14 @@ class Market:
 
                 # Create a NEW instance instead of modifying the market's version
                 placed_defense = type(self.dragging_item)(
-                    self.screen, self  # Use the same constructor
+                    self.screen, self, enemies.enemies_list  # Use the same constructor
                 )
                 placed_defense.pos = final_point  # Set position to the placed location
                 
                 self.placed_defenses.append(placed_defense)  # Store the placed defense
                 economy.balance -= self.dragging_item.cost  # Deduct cost
-                                
-            # Stop invalid placement flash
-            invalid_placement_flash = get_invalid_placement_flash_instance()
-            invalid_placement_flash.stop()
-            
+
+
             self.is_ghost_active = False
 
             # Reset dragging item without removing it from the market
@@ -636,6 +627,7 @@ class Market:
         for defense in self.placed_defenses:
             if isinstance(defense, barrier.Barrier) and self.is_near_path(defense.pos, tolerance=10):
                 defense.ondrag(defense.pos)
+                print("hi")
             else:
                 defense.draw()
 
