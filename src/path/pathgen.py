@@ -1,5 +1,7 @@
 import math
 
+path_width = 25
+
 def catmull_rom_spline(points, points_per_segment):
     """
     Given a list of points, generate a Catmull-Rom spline
@@ -37,6 +39,54 @@ def calculate_distance(p1, p2):
     """Calculate the Euclidean distance between two points."""
     return math.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
 
+def calculate_angle(points):
+    """
+    Given a list of (x, y) points along a path, return a list of angles (in degrees)
+    that are perpendicular to the path at each point.
+    
+    For the first point, the tangent is computed from the first segment.
+    For the last point, the tangent is computed from the last segment.
+    For interior points, the tangent is computed as the average of the angles of the
+    segments before and after the point.
+    """
+    angles = []
+    n = len(points)
+    
+    for i in range(n):
+        if i == 0:
+            # Use the direction of the first segment.
+            dx = points[1][0] - points[0][0]
+            dy = points[1][1] - points[0][1]
+            tangent_angle = math.atan2(dy, dx)
+        elif i == n - 1:
+            # Use the direction of the last segment.
+            dx = points[i][0] - points[i-1][0]
+            dy = points[i][1] - points[i-1][1]
+            tangent_angle = math.atan2(dy, dx)
+        else:
+            # For interior points, average the normalized vectors from the previous and next segments.
+            dx1 = points[i][0] - points[i-1][0]
+            dy1 = points[i][1] - points[i-1][1]
+            dx2 = points[i+1][0] - points[i][0]
+            dy2 = points[i+1][1] - points[i][1]
+            # Normalize both vectors.
+            mag1 = math.hypot(dx1, dy1)
+            mag2 = math.hypot(dx2, dy2)
+            if mag1 == 0 or mag2 == 0:
+                tangent_angle = math.atan2(dy2, dx2)  # fallback
+            else:
+                nx = (dx1 / mag1) + (dx2 / mag2)
+                ny = (dy1 / mag1) + (dy2 / mag2)
+                tangent_angle = math.atan2(ny, nx)
+        
+        # To rotate perpendicular to the path, add 90 degrees (pi/2 radians).
+        perpendicular_angle = tangent_angle + math.pi / 2
+        # Convert to degrees.
+        angle_degrees = math.degrees(perpendicular_angle)
+        angles.append(angle_degrees)
+        print(angles)
+    
+    return angles
 def resample_path(points, step_size):
     """Resample the path so that the distance between consecutive points is uniform."""
     resampled_points = [points[0]]

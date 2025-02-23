@@ -9,8 +9,9 @@ import defenses.barrier as barrier
 import defenses.defense as defense
 import defenses.mortar as mortar
 import defenses.cannon as cannon
+import defenses.reverser as reverser
 from defenses.defense import Defense
-from effects import get_flash_instance, get_invalid_placement_flash_instance
+import effects
 import formulas
 import enemies
 
@@ -124,8 +125,8 @@ class Market:
         self.rect = pygame.Rect(x, y, width, height)
         self.market_has_been_opened = False
         self.tab_index = 0
-        self.new_flash = get_flash_instance()
-        self.invalid_placement_flash = get_invalid_placement_flash_instance()
+        self.economy_flash_inst = effects.Economy_flash(self.screen)
+        self.placement_flash_inst = effects.placement_flash(self.screen)
 
 
         # Containers for the grid layout
@@ -168,7 +169,9 @@ class Market:
         self.defenselist = [
             cannon.Cannon(self.screen, market=self, enemy_list=enemies.enemies_list),
             barrier.Barrier(self.screen, market=self, enemy_list=enemies.enemies_list),
-            mortar.Mortar(self.screen, market=self, enemy_list=enemies.enemies_list)
+            mortar.Mortar(self.screen, market=self, enemy_list=enemies.enemies_list),
+            reverser.Reverse(self.screen, market=self, enemy_list=enemies.enemies_list)
+            
         ]
 
         # Temporary defense object (possibly for previewing or ghosting)
@@ -312,8 +315,7 @@ class Market:
                         # Draw the semi-transparent dark overlay
                         self.screen.blit(dark_surface, (0, 0))
 
-                        flash = get_flash_instance()
-                        flash.trigger()
+                        self.economy_flash_inst.trigger()
 
 
     def handle_dragging(self, defense):
@@ -332,18 +334,23 @@ class Market:
         # Check if the current mouse position is near the path.
         # Adjust the tolerance value as needed.
         # 15 is golden
-        near_path = self.is_near_path(mouse_pos, tolerance=20)
+        near_path = self.is_near_path(mouse_pos, tolerance=15)
 
-        if near_path and isinstance(defense, barrier.Barrier):
-            defense.ondrag(mouse_pos)
+        if isinstance(defense, barrier.Barrier):
+            if near_path and self.get_path_orientation(mouse_pos) == "horizontal":
+                defense.angle = 90
+            else:
+                defense.angle = 0
+            defense.front_img = False
+            defense.draw()
+            print(defense.angle)
         else:
             defense.draw()
         # Validate placement (flash if invalid)
-        invalid_placement_flash = get_invalid_placement_flash_instance()
-        if not self.is_placeable(defense.pos, defense) and not self.rect.collidepoint(defense.pos):
-            invalid_placement_flash.trigger()
+        if not self.is_placeable(defense.pos, defense):
+            self.placement_flash_inst.trigger()
         else:
-            invalid_placement_flash.stop()
+            self.placement_flash_inst.stop()
     
     def get_container_rect(self, container_index): #local container index instead
         # Calculate the total grid dimensions.
@@ -534,8 +541,7 @@ class Market:
 
             # Reset dragging item without removing it from the market
             self.dragging_item = None
-
-
+            self.placement_flash_inst.stop()        
 
     def update(self, events):
         """Called each frame to update market UI based on user interaction."""
@@ -608,16 +614,12 @@ class Market:
             #Logic 
             if self.dragging_item:
                 self.handle_dragging(self.dragging_item)
-            # Update the active flash reference to the new flash
-            self.flash = self.new_flash
-            if self.flash and self.flash.is_active and self.flash != self.new_flash:
-                self.flash.stop()
 
             # Now update and draw the flash
-            self.flash.update()
-            self.flash.draw()
-            self.invalid_placement_flash.update()
-            self.invalid_placement_flash.draw()
+            self.economy_flash_inst.update()
+            self.economy_flash_inst.draw()
+            self.placement_flash_inst.update()
+            self.placement_flash_inst.draw()
             
     def draw_defenses(self, screen):
         """
@@ -625,11 +627,9 @@ class Market:
         of whether the market menu is open.
         """
         for defense in self.placed_defenses:
-            if isinstance(defense, barrier.Barrier) and self.is_near_path(defense.pos, tolerance=10):
-                defense.ondrag(defense.pos)
-                print("hi")
-            else:
-                defense.draw()
+            if isinstance(defense, barrier.Barrier) and self.is_near_path(defense.pos, tolerance=10) and self.get_path_orientation(defense.pos) == "horizontal":
+                defense.angle = 90
+            defense.draw()
 
     def toggle(self):
         """Toggles the market state (open/close)."""

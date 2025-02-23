@@ -1,6 +1,6 @@
 import pygame
 
-class InsufficientFundsFlash:
+class Economy_flash:
     def __init__(self, screen):
         self.screen = screen
         self.width, self.height = screen.get_size()
@@ -11,7 +11,6 @@ class InsufficientFundsFlash:
     def trigger(self):
         self.is_active = True
         self.start_time = pygame.time.get_ticks()
-        print("Triggering, is_active:", self.is_active)
 
     def stop(self):
         self.is_active = False
@@ -25,7 +24,6 @@ class InsufficientFundsFlash:
             # If the duration has passed, deactivate the flash
             if elapsed_time >= self.duration:
                 self.is_active = False
-                print("Deactivating, is_active:", self.is_active)
 
     def draw(self):
         if self.is_active:
@@ -40,20 +38,8 @@ class InsufficientFundsFlash:
                 self.screen.blit(overlay, (0, 0))  # Draw the overlay
             else:
                 self.is_active = False
-# Create a single instance of InsufficientFundsFlash
-flash_instance = None
 
-def initialize_flash(screen):
-    global flash_instance
-    flash_instance = InsufficientFundsFlash(screen)
-
-def get_flash_instance():
-    global flash_instance
-    if flash_instance is None:
-        raise ValueError("Flash instance not initialized. Call initialize_flash() first.")
-    return flash_instance
-
-class InvalidPlacementFlash:
+class placement_flash:
     def __init__(self, screen):
         self.screen = screen
         self.width, self.height = screen.get_size()
@@ -76,20 +62,19 @@ class InvalidPlacementFlash:
         self.alpha = 0
 
     def update(self):
-            print("Dragging:", self.is_dragging)
-            if self.is_active:
-                current_time = pygame.time.get_ticks()
-                
-                if self.is_dragging:
-                    # Reset the fade-out timer when dragging resumes.
-                    self.fadeout_start_time = None
-                    elapsed_time = current_time - self.start_time
-                    if elapsed_time < self.fade_duration:
-                        self.alpha = int(60 * (elapsed_time / self.fade_duration))
-                    else:
-                        self.alpha = 60
-                        if not self.is_dragging:
-                            self.stop()
+        if self.is_active:
+            current_time = pygame.time.get_ticks()
+            
+            if self.is_dragging:
+                # Reset the fade-out timer when dragging resumes.
+                self.fadeout_start_time = None
+                elapsed_time = current_time - self.start_time
+                if elapsed_time < self.fade_duration:
+                    self.alpha = int(60 * (elapsed_time / self.fade_duration))
+                else:
+                    self.alpha = 60
+            else:
+                self.stop()
 
     def draw(self):
         if self.is_active and self.is_dragging:
@@ -97,15 +82,3 @@ class InvalidPlacementFlash:
             overlay.fill((255, 0, 0))  # Fill with red
             overlay.set_alpha(self.alpha)
             self.screen.blit(overlay, (0, 0))
-
-invalid_placement_flash_instance = None
-
-def initialize_invalid_placement_flash(screen):
-    global invalid_placement_flash_instance
-    invalid_placement_flash_instance = InvalidPlacementFlash(screen)
-
-def get_invalid_placement_flash_instance():
-    global invalid_placement_flash_instance
-    if invalid_placement_flash_instance is None:
-        raise ValueError("InvalidPlacementFlash instance not initialized. Call initialize_invalid_placement_flash() first.")
-    return invalid_placement_flash_instance

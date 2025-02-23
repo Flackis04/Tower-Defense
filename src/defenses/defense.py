@@ -30,7 +30,7 @@ class Defense:
             x, y = self.pos
         else:
             # Use a default container center (here, container 2) if no position was set.
-            x, y = self.market.get_container_center(6)
+            x, y = 1,3
         if self.angle == 90:
             w, h = self.height, self.width
         else:

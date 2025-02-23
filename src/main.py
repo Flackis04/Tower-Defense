@@ -2,7 +2,6 @@ import pygame
 import sys
 import os
 import enemies, path.pathgen, market, defenses.cannon, defenses.barrier as barrier, constants, economy, text, spawner
-from effects import initialize_flash, initialize_invalid_placement_flash
 
 def main():
 
@@ -13,37 +12,28 @@ def main():
     pygame.display.set_caption("Tower Defense")
     clock = pygame.time.Clock()
 
-    initialize_flash(screen)
-    initialize_invalid_placement_flash(screen)
-
     path_points = path.pathgen.generate_path_points(width, height)
-    # Precompute cumulative distances along the path for constant speed progression.
     cumulative_lengths = path.pathgen.cumulative_distances(path_points)
 
     
     enemies_list = enemies.make_enemies(screen)
-    
-    # Create the enemy spawner BEFORE the main loop.
     enemy_spawner = spawner.EnemySpawner(screen, path_points, cumulative_lengths)
 
 
     market_instance = market.make_market(screen)
     market_btn = market.make_market_btn(screen, market_instance)
 
-
-
     balance_display = text.Balance_Display(screen)
 
-    # Create a defense instance using market_instance
-    barrier_defense = barrier.Barrier(screen, market_instance, enemies_list)
-
-    # Create an enemy spawner instance (using our BloonTD6-style spawner)
-    # Initialize the player's health.
     player_hp = 50
     game_over = False
 
     # Create a font for the HP display (using a smaller font size than the balance)
     hp_font = pygame.font.Font(None, 24)
+
+
+
+    projectile_inst = defenses.cannon.Projectile(screen)
 
     def circle_rect_collision(circle_center, circle_radius, rect):
         cx, cy = circle_center
@@ -66,10 +56,13 @@ def main():
 
         screen.blit(bg_image, (0, 0))
 
+
+
+        pygame.draw.rect(screen,(200,0,0), projectile_inst.rect, projectile_inst.dia)
+
+
         new_enemies = enemy_spawner.update(dt)
         enemies_list.extend(new_enemies)
-
-
 
         # Cache the mouse position for use in update and draw calls.
         cached_mouse_pos = pygame.mouse.get_pos()

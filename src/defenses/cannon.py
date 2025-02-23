@@ -4,6 +4,9 @@ import math
 import economy  # for refunding when selling
 import defenses.defense as defense
 
+
+
+
 class Cannon(defense.Defense):
     def __init__(self, screen, market, enemy_list, width=4, height=4, hp=250, dmg=1, cost=1000, snapbox=35, scope=400, type="default", has_front=False, front_img=False):
         super().__init__(screen, market, enemy_list, width, height, hp, dmg, cost, snapbox, scope, type, has_front, front_img)
@@ -13,6 +16,10 @@ class Cannon(defense.Defense):
         self.base_rect = self.cannon_base.get_rect(center=self.get_rect().center)
         self.pipe_rect = self.cannon_pipe.get_rect(center=self.get_rect().center)
         self.pos = self.get_rect().center  # Set the cannon's position
+        #self.start_time = pygame.time.get_ticks()
+        self.delay = 750
+        self.start_time = 0
+        #self.elapsed_time = self.current_time-self.start_time
 
 
 
@@ -43,6 +50,11 @@ class Cannon(defense.Defense):
             # Rotate the instance-specific pipe image.
             rotated_pipe = pygame.transform.rotate(self.cannon_pipe_original, -(math.degrees(self.angle) - 90))
             self.cannon_pipe = rotated_pipe
+            current_time = pygame.time.get_ticks()
+            elapsed_time = current_time - self.start_time
+            if elapsed_time == self.delay:
+                Projectile.fire()
+
         else:
             self.angle = 0
             self.cannon_pipe = self.cannon_pipe_original.copy()
@@ -57,5 +69,16 @@ class Cannon(defense.Defense):
             self.screen.blit(self.cannon_base, self.base_rect)
             self.screen.blit(self.cannon_pipe, self.pipe_rect)
 
-class Projectile()
-    
+class Projectile:
+    def __init__(self, screen, startx=100, starty=100):
+        self.screen = screen  # ✅ Store screen reference
+        self.width, self.height = screen.get_size()
+        self.dia = 25
+        self.startx = startx
+        self.starty = starty
+        self.rect = pygame.Rect(self.startx, self.starty, self.dia, self.dia)
+        self.speed = 5  # ✅ Set speed
+
+    def fire(self):
+        print("Fire!")
+        self.rect.x += self.speed 
