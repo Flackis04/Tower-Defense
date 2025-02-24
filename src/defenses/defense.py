@@ -29,12 +29,8 @@ class Defense:
         if self.pos is not None:
             x, y = self.pos
         else:
-            # Use a default container center (here, container 2) if no position was set.
             x, y = 1,3
-        if self.angle == 90:
-            w, h = self.height, self.width
-        else:
-            w, h = self.width, self.height
+        w, h = self.height*1.25, self.width*1.25
         return pygame.Rect(x - w // 2, y - h // 2, w, h)
     
     def handle_event(self, event, mouse_pos):

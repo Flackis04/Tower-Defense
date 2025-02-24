@@ -204,7 +204,8 @@ class Market:
         self.make_containers() #FIXX SO IT GETS USED
         self.draw_defenses(screen)
 
-    
+        if self.market_has_been_opened == False:
+            self.focused_btn = self.tab_btns[0]
 
 
     def setup_inventory(self):
@@ -265,8 +266,6 @@ class Market:
                 color=self.non_focus_color,
             )
             self.tab_btns.append(btn)
-        if self.market_has_been_opened == False:
-            self.focused_btn = self.tab_btns[0]
         return self.tab_btns
     
     def get_filtered_defenses(self, tab_index):
@@ -337,13 +336,13 @@ class Market:
         near_path = self.is_near_path(mouse_pos, tolerance=15)
 
         if isinstance(defense, barrier.Barrier):
-            if near_path and self.get_path_orientation(mouse_pos) == "horizontal":
+            if near_path:
+                defense.rotate
                 defense.angle = 90
-            else:
-                defense.angle = 0
+                defense.isrotated = True
+            
             defense.front_img = False
             defense.draw()
-            print(defense.angle)
         else:
             defense.draw()
         # Validate placement (flash if invalid)

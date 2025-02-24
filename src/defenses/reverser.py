@@ -3,13 +3,13 @@ import path.pathgen
 import defenses.barrier as barrier
 
 class Reverse(barrier.Barrier):
-    def __init__(self, screen, market, enemy_list, width=25, height=50, hp=50, dmg=1, cost=500, snapbox=35, type="other", hasfront=False, front_img=False):
+    def __init__(self, screen, market, enemy_list, width=35, height=50, hp=50, dmg=1, cost=500, snapbox=35, type="other", hasfront=False, front_img=False):
         super().__init__(screen, market, enemy_list, width=50, height=50, hp=50, dmg=1, cost=500, snapbox=35, type="other", hasfront=False, front_img=False)
         self.start_point = None
         self.end_point = None
         self.scope = 50
         x, y = 0, 0
-        self.pos = None
+        x, y = pygame.mouse.get_pos()
         self.rect = pygame.Rect(x, y, self.width, self.height)
 
         self.get_path_limits()
