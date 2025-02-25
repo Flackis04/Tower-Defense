@@ -182,3 +182,8 @@ def get_path_polygon(points, width):
     # Combine left and reversed right to form a closed polygon.
     right_points.reverse()
     return left_points + right_points
+
+def draw_path(screen, path_points):
+    """Draw the game path as a filled polygon."""
+    path_polygon = get_path_polygon(path_points, 35)
+    pygame.draw.polygon(screen, (45, 45, 45), path_polygon)

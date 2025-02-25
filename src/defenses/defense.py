@@ -1,29 +1,31 @@
 import pygame
 import economy
+import utils
+import utils.collision
+import math
+import enemies
+import defenses.projectile
 
 class Defense:
 
     local_container_index = 0
-    def __init__(self, screen, market, enemy_list, width, height, hp, dmg, cost, snapbox, scope, type, has_front, front_img=False):
-        self.enemies_list = enemy_list
-        self.market = market
+    def __init__(self, screen, market, enemy_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img):
         self.screen = screen
+        self.market = market
+        self.enemies_list = enemy_list
+        self.width = width
+        self.height = height
         self.hp = hp
         self.dmg = dmg
         self.cost = cost
-        self.snapbox = snapbox
-        self.pos = None  # Initial position
-        self.angle = 0   # Angle: 0 for normal, 90 for rotated
-        self.width = width
-        self.height = height
-        self.type = type
-        self.selected = False
         self.scope = scope
-        self.othertypes = [] #3rd category
+        self.tags = tags
+        self.has_front = has_front
         self.front_img = front_img
-        self.hasfront = has_front
-        self.container_index = None
 
+        self.selected = False
+        self.pos = None
+        self.angle = 0
                 
     def get_rect(self):
         if self.pos is not None:
@@ -58,6 +60,82 @@ class Defense:
         button_x = defense_rect.centerx - button_width // 2
         button_y = defense_rect.bottom + 10
         return pygame.Rect(button_x, button_y, button_width, button_height)
+    
+    def check_collisions(enemies_list, market_instance, barrier_inst):
+        """
+        Process collisions between enemies and defenses (specifically barriers).
+        If a collision occurs, adjust HP accordingly and schedule objects for removal.
+        """
+        enemies_to_remove = []
+        defenses_to_remove = []
+        for enemy in enemies_list:
+            enemy_center = (enemy.posx, enemy.posy)
+            for defense in market_instance.placed_defenses:
+                # For barriers, use the barrier instance's rect.
+                if defense == barrier_inst:
+                    defense_rect = barrier_inst.rect
+                    if utils.collision.circle_rect_collision(enemy_center, enemy.radius, defense_rect):
+                        enemy.hp -= defense.dmg
+                        defense.hp -= 1
+                        if enemy.hp <= 0:
+                            enemies_to_remove.append(enemy)
+                            economy.balance += enemy.reward
+                        if defense.hp <= 0:
+                            defenses_to_remove.append(defense)
+        for enemy in enemies_to_remove:
+            if enemy in enemies_list:
+                enemies_list.remove(enemy)
+        for defense in defenses_to_remove:
+            if defense in market_instance.placed_defenses:
+                market_instance.placed_defenses.remove(defense)
+
+    def update_defenses_events(market_instance, event_list, cached_mouse_pos):
+        """
+        Update defenses that require aiming and event handling.
+        """
+        
+        for defense in market_instance.placed_defenses:
+            if "aim" in defense.tags:
+                defense.aim_at_enemy()
+                for event in event_list:
+                    defense.handle_event(event, cached_mouse_pos)
+
+    def get_distance(self, pos1, pos2):
+        return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
+    
+    def get_closest_enemy(self):
+        closest_enemy = None
+        scope_distance = self.scope
+        # Reference the global enemy list from the enemies module
+        for enemy in enemies.enemies_list:
+            distance = self.get_distance(self.pos, enemy.get_position())
+            if distance < scope_distance:
+                scope_distance = distance
+                closest_enemy = enemy
+        return closest_enemy
+
+    def get_angle_to(self, enemy):
+        dx = enemy.posx - self.pos[0]
+        dy = enemy.posy - self.pos[1]
+        return math.atan2(dy, dx)
+    
+    def aim_at_enemy(self):
+        enemy = self.get_closest_enemy()
+        if enemy and self.pos:
+            self.angle = self.get_angle_to(enemy)
+            # Rotate the instance-specific pipe image.
+            if isinstance(Defense, defenses.cannon.Cannon):
+                rotated_pipe = pygame.transform.rotate(self.cannon_pipe_original, -(math.degrees(self.angle) - 90))
+                self.cannon_pipe = rotated_pipe
+                current_time = pygame.time.get_ticks()
+                elapsed_time = current_time - self.start_time
+                if elapsed_time == self.delay:
+                    defenses.projectile.Projectile.fire()
+
+        else:
+            self.angle = 0
+            if isinstance(Defense, defenses.cannon.Cannon):
+                self.cannon_pipe = self.cannon_pipe_original.copy()
 
     def draw(self, front_img):
         

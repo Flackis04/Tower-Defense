@@ -75,12 +75,36 @@ class Enemy:
             else:
                 return True
         return False
+    
+    def update_enemy_escapes(enemies_list, cumulative_lengths, player_hp):
+        """
+        Remove enemies that have reached the end of the path and subtract their damage
+        from the player's HP.
+        """
+        enemies_escaped = []
+        for enemy in enemies_list:
+            if enemy.distance >= cumulative_lengths[-1]:
+                enemies_escaped.append(enemy)
+        for enemy in enemies_escaped:
+            player_hp -= enemy.tier * 5  # Adjust damage cost as desired.
+            enemies_list.remove(enemy)
+        return player_hp
+
+    def update_enemies(enemies_list, enemy_spawner, dt, path_points, cumulative_lengths):
+        """
+        Spawn new enemies, add them to the list, and update each enemy's state.
+        """
+        new_enemies = enemy_spawner.update(dt)
+        enemies_list.extend(new_enemies)
+        for enemy in enemies_list:
+            enemy.update(path_points, cumulative_lengths)
 
     def draw(self):
         pygame.draw.circle(self.screen, self.color, (int(self.posx), int(self.posy)), self.radius, 5)
 
-def make_enemies(screen):
-    global enemies_list
-    enemies_list = []
-    return enemies_list
+def make_enemies():
+    return []  # Return an empty list properly
 
+def draw_enemies(enemies_list):
+    for enemy in enemies_list:
+        enemy.draw()  # Call draw() on each Enemy instance

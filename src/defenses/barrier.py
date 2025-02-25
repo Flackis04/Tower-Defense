@@ -3,8 +3,9 @@ import defenses.defense as defense
 import path.pathgen
 
 class Barrier(defense.Defense):
-    def __init__(self, screen, market, enemy_list, width=50, height=50, hp=50, dmg=1, cost=500, snapbox=35, type="other", hasfront=False, front_img=False):
-        super().__init__(screen, market, enemy_list, width, height, hp, dmg, cost, snapbox, type, "other", hasfront, front_img)
+    def __init__(self, screen, market, enemy_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img):
+        super().__init__(screen, market, enemy_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img)
+        
         # Load images
         self.barrier = pygame.image.load("assets/barrier/barrier.png").convert_alpha()
         self.barrier_front = pygame.image.load("assets/barrier/barrier_front.png").convert_alpha()

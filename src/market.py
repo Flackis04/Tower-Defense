@@ -1,7 +1,7 @@
 import pygame
-import constants
+import other.constants
 import economy
-import config  # configuration file for drag-and-drop settings
+import other.config  # configuration file for drag-and-drop settings
 import math
 import time
 import path.pathgen  # used to generate the path points
@@ -11,8 +11,8 @@ import defenses.mortar as mortar
 import defenses.cannon as cannon
 import defenses.reverser as reverser
 from defenses.defense import Defense
-import effects
-import formulas
+import ui.effects as effects
+import other.formulas
 import enemies
 
 class Marketbtn:
@@ -112,7 +112,7 @@ class Market:
         width=175,
         height=450,
         text="Items...",
-        color=constants.color_theme,
+        color=other.constants.color_theme,
         text_color=(255, 255, 255),
         defensetypes = ["default", "special", "other"],
         defenselist = [],
@@ -139,7 +139,7 @@ class Market:
         self.color = color
         self.current_color = color
         self.text_color = text_color
-        self.non_focus_color = constants.color_theme
+        self.non_focus_color = other.constants.color_theme
         self.focus_color = (50, 50, 205)
 
         # Text and font
@@ -153,7 +153,7 @@ class Market:
         self.pin_btn_pressed = False  # To debounce the pin button
 
         # Drag-and-drop functionality
-        self.drag_drop_enabled = config.DRAG_DROP_ENABLED
+        self.drag_drop_enabled = other.config.DRAG_DROP_ENABLED
         self.dragging_item = None
         self.drag_offset = (0, 0)
 
@@ -167,18 +167,12 @@ class Market:
         # Defense-related attributes
         self.defensetypes = defensetypes
         self.defenselist = [
-            cannon.Cannon(self.screen, market=self, enemy_list=enemies.enemies_list),
-            barrier.Barrier(self.screen, market=self, enemy_list=enemies.enemies_list),
-            mortar.Mortar(self.screen, market=self, enemy_list=enemies.enemies_list),
-            reverser.Reverse(self.screen, market=self, enemy_list=enemies.enemies_list)
+            cannon.Cannon(self.screen, market=self, enemy_list=enemies.enemies_list, width=4, height=4, hp=250, dmg=1, cost=1000, scope=400, tags=("default", "aim"), has_front=False, front_img=False),
+            barrier.Barrier(self.screen, market=self, enemy_list=enemies.enemies_list, width=50, height=50, hp=50, dmg=1, cost=500, scope=False, tags=("other",), has_front=False, front_img=False),
+            mortar.Mortar(self.screen, market=self, enemy_list=enemies.enemies_list, width=4, height=4, hp=300, dmg=3, cost=5000, scope=300, tags=("default", "aim"), has_front=False, front_img=False),
+            reverser.Reverse(self.screen, market=self, enemy_list=enemies.enemies_list, width=35, height=50, hp=50, dmg=1, cost=500, scope=50, tags=("other",), has_front=False, front_img=False)
             
         ]
-
-        # Temporary defense object (possibly for previewing or ghosting)
-        self.temp_defense = defense.Defense(
-            self.screen, market=self, enemy_list=enemies.enemies_list, width=0, height=0, hp=0, dmg=0, cost=0,
-            snapbox=0, type="default", scope=0, has_front=False, front_img=False
-        )
 
         # Placed defenses list
         self.placed_defenses = []
@@ -206,7 +200,6 @@ class Market:
 
         if self.market_has_been_opened == False:
             self.focused_btn = self.tab_btns[0]
-
 
     def setup_inventory(self):
         self.inventory = [False] * 10  
@@ -270,13 +263,11 @@ class Market:
     
     def get_filtered_defenses(self, tab_index):
         self.tab_type = self.defensetypes[tab_index]
-        
-        # Filter defenses that belong to the current tab
-        filtered_defenses = [defense for defense in self.defenselist if defense.type == self.tab_type]
-        
+
+        filtered_defenses = [defense for defense in self.defenselist if self.tab_type in defense.tags]
         if not filtered_defenses:
             for defense in self.defenselist:
-                if defense.type == self.tab_type[2]:
+                if self.tab_type[2] in defense.tags:
                     filtered_defenses.append(defense)
         
         self.set_container_index(filtered_defenses)
@@ -296,7 +287,7 @@ class Market:
                 defense.pos = self.get_container_rect(defense.container_index).center
             defense.front_img = True
             defense.draw()
-            if getattr(defense, "hasfront", False) and getattr(defense, "front_img", False):
+            if getattr(defense, "has_front", False) and getattr(defense, "front_img", False):
                 defense.draw_front_img()
 
     def get_container_drag_initiation(self, event, tab_index):
@@ -315,7 +306,6 @@ class Market:
                         self.screen.blit(dark_surface, (0, 0))
 
                         self.economy_flash_inst.trigger()
-
 
     def handle_dragging(self, defense):
         """Handles dragging logic for a defense item."""
@@ -528,7 +518,18 @@ class Market:
 
                 # Create a NEW instance instead of modifying the market's version
                 placed_defense = type(self.dragging_item)(
-                    self.screen, self, enemies.enemies_list  # Use the same constructor
+                    self.screen, 
+                    market=self, 
+                    enemy_list=self.dragging_item.enemies_list, 
+                    width=self.dragging_item.width, 
+                    height=self.dragging_item.height, 
+                    hp=self.dragging_item.hp, 
+                    dmg=self.dragging_item.dmg, 
+                    cost=self.dragging_item.cost, 
+                    scope=self.dragging_item.scope, 
+                    tags=self.dragging_item.tags, 
+                    has_front=self.dragging_item.has_front, 
+                    front_img=self.dragging_item.front_img
                 )
                 placed_defense.pos = final_point  # Set position to the placed location
                 
@@ -577,7 +578,7 @@ class Market:
         if self.is_animating:
             current_time = pygame.time.get_ticks() - self.start_time  # Calculate elapsed time
             distance = self.rect.width  # Move its own width to the right
-            self.rect.x = self.screen.get_size()[0] - self.rect.width + formulas.ease_out_expo(current_time, 0, distance, 1000)  # Update position
+            self.rect.x = self.screen.get_size()[0] - self.rect.width + other.formulas.ease_out_expo(current_time, 0, distance, 1000)  # Update position
             
             # Check if the animation is complete
             if current_time >= 1000:  # Assuming the animation lasts 1000 ms
@@ -642,6 +643,24 @@ class Market:
         # No action required
 def make_market(screen, width=175, height=450):
     return Market(screen, width=width, height=height)
+
+def update_market(event_list, market_instance, market_btn):
+    """
+    Handle market button and market toggle events.
+    Returns the updated event_list (with MOUSEBUTTONDOWN events removed, if needed)
+    and the current mouse position.
+    """
+    cached_mouse_pos = pygame.mouse.get_pos()
+    if market_btn.update(event_list, cached_mouse_pos) and market_instance.btn_is_active:
+        print("Market button clicked")
+        market_instance.toggle()
+        market_instance.is_active = True
+        # Remove MOUSEBUTTONDOWN events to prevent click propagation
+        event_list = [e for e in event_list if e.type != pygame.MOUSEBUTTONDOWN]
+    elif market_instance.update(event_list) and market_instance.is_active:
+        market_instance.toggle()
+        market_instance.is_active = False
+    return event_list, cached_mouse_pos
     
 
 #class Upgradebtn:
