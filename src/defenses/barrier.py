@@ -38,27 +38,8 @@ class Barrier(defense.Defense):
                 self.front_rect = self.barrier_front.get_rect(center=self.pos)
             self.screen.blit(self.barrier_front, self.front_rect)
         else:
-            if self.angle == 90 and self.isrotated == False:
-                self.barrier = pygame.transform.rotate(self.barrier_original, self.angle)
-                self.isrotated == True
-            elif self.isrotated == True:
-                self.barrier = pygame.transform.rotate(self.barrier_original, self.angle)
-                self.isrotated == False
-            else:
-                self.isrotated = False
-
             self.rect = self.barrier.get_rect(center=self.pos)
             self.rect.height //= 8  # Reduce height while keeping the center unchanged
 
-            
-            # Draw the barrier image using the updated rect.
-                        # Draw barrier image
             self.screen.blit(self.barrier, self.rect)
             pygame.draw.rect(self.screen, (255, 0, 0), self.rect, 2)
-            
-            # Uncomment to visualize the hitbox for debugging:
-            # pygame.draw.rect(self.screen, (255, 0, 0), self.rect, 2)
-
-    def get_rect(self):
-        # Return the updated hitbox for collision detection.
-        return self.rect

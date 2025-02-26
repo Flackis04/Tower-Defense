@@ -2,7 +2,7 @@ def draw_ui(screen, market_instance, market_btn, balance_display, hp_font, playe
     """
     Draw UI elements including defenses, market, balance display, and HP.
     """
-    market_instance.draw_defenses(screen)
+    market_instance.draw_defenses()
     if market_instance.is_active:
         market_instance.draw(screen, cached_mouse_pos)
     if market_instance.btn_is_active:

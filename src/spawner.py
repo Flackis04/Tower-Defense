@@ -8,8 +8,8 @@ class EnemySpawner:
         self.path_points = path_points
         self.cumulative_lengths = cumulative_lengths
         self.spawn_timer = 0.0
-        self.spawn_interval = 2000  # start with 2000ms (2 seconds) delay between spawns
-        self.wave_count = 0       # total count of enemies spawned to influence difficulty
+        self.spawn_interval = 2000  # Start with 2000ms (2 seconds) delay between spawns.
+        self.wave_count = 0       # Total count of enemies spawned to influence difficulty.
 
     def update(self, dt):
         """
@@ -19,11 +19,10 @@ class EnemySpawner:
         new_enemies = []
         self.spawn_timer += dt
 
-        # When the spawn timer exceeds the current spawn delay,
-        # spawn a group of enemies with varying quantities.
+        # Check if it's time to spawn a new group of enemies.
         while self.spawn_timer >= self.spawn_interval:
-            # Determine the group quantity.
-            # This spawns between 1 and (3 + (wave_count // 20)) enemies.
+            # Determine the number of enemies to spawn this wave.
+            # Spawns between 1 and (3 + (wave_count // 20)) enemies.
             group_quantity = random.randint(1, 3 + self.wave_count // 20)
             for _ in range(group_quantity):
                 enemy = self.spawn_enemy()
@@ -33,7 +32,9 @@ class EnemySpawner:
 
             # Vary the spawn delay for the next group using a random factor,
             # but never let the delay drop below 500ms.
-            self.spawn_interval = max(500, int(self.spawn_interval * random.uniform(0.9, 1.2)))
+            random_factor = random.uniform(0.9, 1.2)
+            self.spawn_interval = max(500, int(self.spawn_interval * random_factor))
+        
         return new_enemies
 
     def spawn_enemy(self):
@@ -54,7 +55,7 @@ class EnemySpawner:
             5: (255, 192, 203)    # pink
         }
         color = tier_to_color[tier]
-        radius = 10  # adjust if desired per tier
+        radius = 10  # Adjust if desired per tier.
         # Base speed increases with the overall enemy count.
         base_speed = 1 + self.wave_count / 50.0
         # Each enemy tier above 1 increases speed by 20%.
@@ -62,4 +63,6 @@ class EnemySpawner:
         step = base_speed * speed_multiplier
         # Reward scales with the enemy tier.
         reward = tier * 10
+
+        # Create and return a new Enemy instance.
         return enemies.Enemy(self.screen, tier, color, radius, step, reward)

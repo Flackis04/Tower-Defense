@@ -1,3 +1,3 @@
 import pygame
 
-color_theme = (30,30,30)
+color_theme = (32,32,32)

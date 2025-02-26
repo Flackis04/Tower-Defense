@@ -1,3 +1,4 @@
+from turtle import onclick
 import pygame
 import other.constants
 import economy
@@ -15,49 +16,76 @@ import ui.effects as effects
 import other.formulas
 import enemies
 
-class Marketbtn:
+class Button:
     def __init__(
-        self,
-        market_instance,
-        x,
-        y,
-        width,
-        height,
-        border_radius,
-        text="Buy",
-        color=(50, 205, 50),
-        hover_color=(100, 255, 100),
-        text_color=(255, 255, 255),
-        transition_time=0.25,
-    ):
-        self.market = market_instance
-        self.rect = pygame.Rect(x, y, width, height)
-        self.color = color
-        self.hover_color = hover_color
-        self.current_color = color
-        self.text_color = text_color
-        self.text = text
-        self.font = pygame.font.SysFont(None, 24)
-        self.border_radius = border_radius
-        self.transition_time = transition_time  # Time in seconds
-        self.transition_start = None  # Track transition start time
-        self.hovering = False
+            self,
+            market,
+            xpos,
+            ypos,
+            width,
+            height,
+            border_radius,
+            text,
+            font,
+            text_size,
+            bold,
+            icon,
+            color,
+            hover_color,
+            text_color,
+            transition_time,
+            on_click=None,
+            on_hover=None,
+            toggle=False,
+        ):
+            self.market = market
+            self.xpos = xpos  # Store position
+            self.ypos = ypos
+            self.width = width  # Store size
+            self.height = height
+            self.border_radius = border_radius
+            self.font = pygame.font.SysFont(font, text_size, bold)
+            self.icon = icon
+            self.text = text
+            self.color = color
+            self.hover_color = hover_color
+            self.text_color = text_color
+            self.transition_time = transition_time
+            self.on_click = on_click
+            self.on_hover = on_hover
+            self.toggle = toggle
+
+            # Create button rectangle
+            self.rect = pygame.Rect(self.xpos, self.ypos, self.width, self.height)
+
+            # Transition / hover state
+            self.transition_start = None  # Track transition start time
+            self.hovering = False
+            self.current_color = self.color  # Default to normal color
+
+            # Debugging - Check if button initializes properly
+            print(f"Button '{self.text}' created at {self.xpos}, {self.ypos}, {self.width}x{self.height}")
+
 
     def draw(self, surface):
-        pygame.draw.rect( 
-            surface, self.current_color, self.rect, border_radius=self.border_radius
-        )
+        pygame.draw.rect(surface, self.current_color, self.rect, border_radius=self.border_radius)
         text_surface = self.font.render(self.text, True, self.text_color)
         text_rect = text_surface.get_rect(center=self.rect.center)
         surface.blit(text_surface, text_rect)
 
+    def is_hovered(self, mouse_pos):
+        return self.rect.collidepoint(mouse_pos)
+
     def update(self, events, cached_mouse_pos):
-        is_hovering = self.rect.collidepoint(cached_mouse_pos)
+        is_hovering = self.is_hovered(cached_mouse_pos)
 
         # Start transition if hover state changes
         if is_hovering != self.hovering:
             self.hovering = is_hovering
-            self.transition_start = time.time()  # Record the start time
+            self.transition_start = time.time()
+
+            if self.on_hover and is_hovering:
+                self.on_hover()
 
         # Handle smooth transition
         if self.transition_start is not None:
@@ -69,29 +97,26 @@ class Marketbtn:
             if t >= 1:
                 self.transition_start = None
 
-        for event in events:
-            if (
-                event.type == pygame.MOUSEBUTTONDOWN
-                and event.button == 1
-                and self.rect.collidepoint(event.pos)
-            ):
-                self.market.is_active = True
-                return True
-        return False
-    
-    def lerp(self, color1, color2, t):
+    def handle_event(self, event_list):
+            """Handles button click events and stops propagation by removing the event."""
+            for event in event_list[:]:  # Iterate over a copy
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if hasattr(self, "rect") and self.rect.collidepoint(event.pos) and self.market.btn_is_active:  # Ensure rect exists
+                        print(f"Button clicked at {event.pos}")  # Debug print
+                        if self.on_click:
+                            self.on_click()
+                        event_list.remove(event)  # Remove the event to stop further propagation
+                        return True  # Button handled the event
+            return False
+
+    @staticmethod
+    def lerp(color1, color2, t):
         """Linear interpolation between two RGB colors."""
         return (
             int(color1[0] + (color2[0] - color1[0]) * t),
             int(color1[1] + (color2[1] - color1[1]) * t),
-            int(color1[2] + (color2[2] - color1[2]) * t)
+            int(color1[2] + (color2[2] - color1[2]) * t),
         )
-
-
-def make_market_btn(screen, market_instance, border_radius=7, btn_width=100, btn_height=40, margin=10):
-    screen_width, _ = screen.get_size()
-    x = screen_width - btn_width - margin
-    return Marketbtn(market_instance, x, margin, btn_width, btn_height, border_radius)
 
 
 # --- New Container class for inventory management ---
@@ -107,32 +132,54 @@ class Market:
     def __init__(
         self,
         screen,
-        x=None,
-        y=0,
-        width=175,
-        height=450,
-        text="Items...",
-        color=other.constants.color_theme,
-        text_color=(255, 255, 255),
-        defensetypes = ["default", "special", "other"],
-        defenselist = [],
+        screen_width,
+        screen_height,
+        margin,
+        xpos,
+        ypos,
+        width,
+        height,
+        text,
+        color,
+        text_color,
+        defense_types,
+        defense_list,
+        container_spacing, #container_spacing
     ):
-        if x is None:
-            screen_width, _ = screen.get_size()
-            x = screen_width - width  # align flush with the right edge
+        #self.defense_list = defense_list
+
+
         # Initialize basic attributes
         self.screen = screen
-        self.rect = pygame.Rect(x, y, width, height)
+        self.screen_width = screen_width
+        self.screen_height = screen_height
+        self.margin = margin
+        self.xpos = xpos
+        self.ypos = ypos
+        self.width = width
+        self.height = height
+        self.text = text
+        self.color = color
+        self.text_color = text_color
+        self.defense_types = defense_types
+        self.defense_list = defense_list
+        self.container_spacing = container_spacing
+
         self.market_has_been_opened = False
         self.tab_index = 0
         self.economy_flash_inst = effects.Economy_flash(self.screen)
         self.placement_flash_inst = effects.placement_flash(self.screen)
+        self.rect = pygame.Rect(xpos, ypos, width, height)  
+        self.clickable_rect = pygame.Rect(xpos, ypos-60, width, height+60)
+        self.btn_list = []
 
+    
+        self.market_btn = None  # Initialize as None
+        self.make_market_btn()  # ✅ Create the button
 
-        # Containers for the grid layout
+        # Containers for the grid layout #eventually expand my markets arguments with similar...
         self.num_cols = 2
         self.num_rows = 5
-        self.gap = 5
         self.container_size = 70
 
         # Colors
@@ -158,6 +205,7 @@ class Market:
         self.drag_offset = (0, 0)
 
         # UI and tab-related attributes
+        
         self.focused_btn = None
         self.tab_btns = []
         self.tab_type = None
@@ -165,8 +213,8 @@ class Market:
         self.orientation = None
 
         # Defense-related attributes
-        self.defensetypes = defensetypes
-        self.defenselist = [
+        self.defense_types = defense_types
+        self.defense_list = [
             cannon.Cannon(self.screen, market=self, enemy_list=enemies.enemies_list, width=4, height=4, hp=250, dmg=1, cost=1000, scope=400, tags=("default", "aim"), has_front=False, front_img=False),
             barrier.Barrier(self.screen, market=self, enemy_list=enemies.enemies_list, width=50, height=50, hp=50, dmg=1, cost=500, scope=False, tags=("other",), has_front=False, front_img=False),
             mortar.Mortar(self.screen, market=self, enemy_list=enemies.enemies_list, width=4, height=4, hp=300, dmg=3, cost=5000, scope=300, tags=("default", "aim"), has_front=False, front_img=False),
@@ -196,7 +244,10 @@ class Market:
         self.make_tab_btns()
         self.setup_inventory()
         self.make_containers() #FIXX SO IT GETS USED
-        self.draw_defenses(screen)
+        self.draw_defenses()
+
+        
+
 
         if self.market_has_been_opened == False:
             self.focused_btn = self.tab_btns[0]
@@ -211,11 +262,11 @@ class Market:
         # Get grid positions for all containers (row, col tuples).
         self.all_container_indices = [(r, c) for r in range(self.num_rows) for c in range(self.num_cols)]
         # Divide the total containers among categories (using ceiling division).
-        containers_per_tab = math.ceil(len(self.all_container_indices) / len(self.defensetypes))
+        containers_per_tab = math.ceil(len(self.all_container_indices) / len(self.defense_types))
         self.containers_by_tab = {}
         self.containers_all = []
         container_id = 0
-        for cat in range(len(self.defensetypes)):
+        for cat in range(len(self.defense_types)):
             self.containers_by_tab[cat] = []
             for i in range(containers_per_tab):
                 idx = cat * containers_per_tab + i
@@ -226,48 +277,153 @@ class Market:
                     self.containers_all.append(container)
                     container_id += 1
 
-    def make_pin_btn(self):
-        small_btn_width = 10
-        small_btn_height = 10
-        small_btn_x = self.rect.x + 5  # align with the market's left edge
-        small_btn_y = self.rect.y - 5 + self.rect.height - small_btn_height  # bottom aligned with the market
-        self.pin_btn = Marketbtn(
+    def update_buttons(self):
+        """Update the position of buttons dynamically based on self.rect."""
+        for i, btn in enumerate(self.tab_btns):
+            btn.rect.x = self.rect.x + (self.rect.width // len(self.tab_btns)) * i
+            btn.rect.y = self.rect.y
+
+        # Update pin button position
+        self.pin_btn.rect.x = self.rect.x + 5
+        self.pin_btn.rect.y = self.rect.y + self.rect.height - self.pin_btn.rect.height - 5
+        
+    def make_info_btn(self):
+        pass
+
+    def make_upgrade_btn(self):
+        """Creates the upgrade button."""
+        upgrade_btn_width = 50
+        upgrade_btn_height = 20
+        upgrade_btn_x = self.rect.x + self.rect.width - upgrade_btn_width - 5  # Align to the right
+        upgrade_btn_y = self.rect.y + self.rect.height - upgrade_btn_height - 5  # Bottom aligned
+
+        self.upgrade_btn = Button(
             self,
-            small_btn_x,
-            small_btn_y,
-            small_btn_width,
-            small_btn_height,
+            upgrade_btn_x,
+            upgrade_btn_y,
+            upgrade_btn_width,
+            upgrade_btn_height,
+            border_radius=3,
+            text="Upgrade",
+            font="Arial",
+            text_size=14,
+            bold=True,
+            icon=None,
+            color=(100, 100, 250),
+            hover_color=(120, 120, 255),
+            text_color=(255, 255, 255),
+            transition_time=0.2,
+            on_click=lambda: print("Upgrade Clicked"),
+            on_hover=None,
+            toggle=False
+        )
+        self.btn_list.append(self.upgrade_btn)
+
+    def make_pin_btn(self):
+        """Creates the pin button to keep the market open."""
+        pin_btn_width = 10
+        pin_btn_height = 10
+        pin_btn_x = self.rect.x + 5  # Align with the market's left edge
+        pin_btn_y = self.rect.y + self.rect.height - pin_btn_height - 5  # Bottom aligned
+
+        self.pin_btn = Button(
+            self,
+            pin_btn_x,
+            pin_btn_y,
+            pin_btn_width,
+            pin_btn_height,
             border_radius=1,
             text="",
+            font="Arial",
+            text_size=10,
+            bold=False,
+            icon=None,
             color=(150, 150, 150),
-            hover_color=(180, 180, 180)
+            hover_color=(180, 180, 180),
+            text_color=(255, 255, 255),
+            transition_time=0.15,
+            on_click=lambda: print("Pin Clicked"),
+            on_hover=None,
+            toggle=False
         )
-        
+        self.btn_list.append(self.pin_btn)
+
+    def on_tab_click(self, index):
+        """Handles tab button click."""
+        if self.is_active:
+            self.focused_btn = self.tab_btns[index]  # Update the current tab index
+
     def make_tab_btns(self):
-        btn_height = 40
-        btn_width = self.rect.width // 3
+        """Creates tab buttons for different sections of the market."""
+        self.tab_btn_height = 40
+        tab_btn_width = self.rect.width // 3
+            
         for i in range(3):
-            x_btn = self.rect.x + btn_width * i
-            btn = Marketbtn(
+            x_tab_btn = self.rect.x + tab_btn_width * i
+            tab_btn = Button(
                 self,
-                x_btn,
+                x_tab_btn,
                 self.rect.y,
-                btn_width,
-                btn_height,
+                tab_btn_width,
+                self.tab_btn_height,
                 border_radius=0,
-                text=f"{i+1}",
+                text=f"Tab {i+1}",
+                font="Arial",
+                text_size=16,
+                bold=False,
+                icon=None,
                 color=self.non_focus_color,
+                hover_color=self.focus_color,
+                text_color=(255, 255, 255),
+                transition_time=0.2,
+                on_click=lambda i=i: self.on_tab_click(i),  # Fix on_click
+                on_hover=None,
+                toggle=False
             )
-            self.tab_btns.append(btn)
+            self.tab_btns.append(tab_btn)
+            self.btn_list.append(tab_btn)
         return self.tab_btns
+
+    
+    def make_market_btn(self):
+        margin = 20  # Margin from the edges
+        btn_width = 140
+        btn_height = 70
+
+        xpos = self.screen_width - btn_width - margin  # Align right with margin
+        ypos = margin  # Top position with margin
+
+        self.market_btn = Button(
+            self,
+            xpos=xpos,
+            ypos=ypos,
+            width=btn_width,
+            height=btn_height,
+            border_radius=10,
+            text="Market",
+            font="Arial",
+            text_size=24,
+            bold=True,
+            icon=None,  # No icon for now
+            color=(65, 205, 65),
+            hover_color=(100, 255, 100),
+            text_color=(255, 255, 255),
+            transition_time=0.25,
+            on_click=lambda: self.toggle(),  # ✅ Use wrapper function
+            on_hover=lambda: print("Hovering over Market Button"),
+            toggle=False
+        )
+        self.btn_list.append(self.market_btn)
+        return self.market_btn
+
     
     def get_filtered_defenses(self, tab_index):
-        self.tab_type = self.defensetypes[tab_index]
+        self.tab_type = self.defense_types[tab_index]
 
-        filtered_defenses = [defense for defense in self.defenselist if self.tab_type in defense.tags]
-        if not filtered_defenses:
-            for defense in self.defenselist:
-                if self.tab_type[2] in defense.tags:
+        filtered_defenses = [defense for defense in self.defense_list if self.tab_type in defense.tags]
+        if not filtered_defenses and self.tab_type == self.defense_types[2]:
+            for defense in self.defense_list:
+                if self.defense_types[2] in defense.tags:
                     filtered_defenses.append(defense)
         
         self.set_container_index(filtered_defenses)
@@ -286,15 +442,15 @@ class Market:
             if defense not in self.placed_defenses and self.is_active:
                 defense.pos = self.get_container_rect(defense.container_index).center
             defense.front_img = True
-            defense.draw()
             if getattr(defense, "has_front", False) and getattr(defense, "front_img", False):
                 defense.draw_front_img()
+            else: 
+                defense.draw()
 
     def get_container_drag_initiation(self, event, tab_index):
         for defense in self.get_filtered_defenses(tab_index):
             container_rect = self.get_container_rect(defense.container_index)
             if container_rect.collidepoint(event.pos):
-                # Check which defense is being clicked based on the active tab btn
                 if self.focused_btn == self.tab_btns[tab_index]:
                     if economy.balance >= defense.cost:
                         self.dragging_item = defense
@@ -343,8 +499,8 @@ class Market:
     
     def get_container_rect(self, container_index): #local container index instead
         # Calculate the total grid dimensions.
-        grid_width = self.num_cols * self.container_size + (self.num_cols + 1) * self.gap
-        grid_height = self.num_rows * self.container_size + (self.num_rows + 1) * self.gap
+        grid_width = self.num_cols * self.container_size + (self.num_cols + 1) * self.container_spacing
+        grid_height = self.num_rows * self.container_size + (self.num_rows + 1) * self.container_spacing
         vertical_offset = 20  # Moves the grid 20 pixels lower.
 
         # Center the grid inside self.rect.
@@ -360,8 +516,8 @@ class Market:
             col = 1
 
         # Calculate the x and y coordinates for the container.
-        container_x = start_x + self.gap + col * (self.container_size + self.gap)
-        container_y = start_y + self.gap + row * (self.container_size + self.gap)
+        container_x = start_x + self.container_spacing + col * (self.container_size + self.container_spacing)
+        container_y = start_y + self.container_spacing + row * (self.container_size + self.container_spacing)
 
         return pygame.Rect(container_x, container_y, self.container_size, self.container_size)
     
@@ -509,13 +665,10 @@ class Market:
         """Handles placing an item when the user releases the mouse button."""
         if self.dragging_item:
             self.drop_point = event.pos
-            print("drop point", self.drop_point)
-
             if self.is_placeable(self.drop_point, self.dragging_item):
                 snapped_point = self.snap_point_to_path(self.drop_point)
                 final_point = snapped_point if snapped_point is not None else self.drop_point
-                print("final point", final_point)
-
+                
                 # Create a NEW instance instead of modifying the market's version
                 placed_defense = type(self.dragging_item)(
                     self.screen, 
@@ -541,23 +694,46 @@ class Market:
 
             # Reset dragging item without removing it from the market
             self.dragging_item = None
-            self.placement_flash_inst.stop()        
+            self.placement_flash_inst.stop()     
 
-    def update(self, events):
+    def draw_defenses(self):
+        """
+        Draws all placed defenses so they remain visible regardless
+        of whether the market menu is open.
+        """
+        for defense in self.placed_defenses:
+            if isinstance(defense, barrier.Barrier) and self.is_near_path(defense.pos, tolerance=10) and self.get_path_orientation(defense.pos) == "horizontal":
+                defense.angle = 90
+            defense.draw()
+
+    def toggle(self):
+        """Toggles the market state (open/close)."""
+        self.market_has_been_opened = True
+        self.is_active = not self.is_active
+        self.btn_is_active = not self.btn_is_active
+        if self.is_active:
+            self.start_time = pygame.time.get_ticks()  # Record the start time
+            self.is_animating = True  # Start animation when opening the market 
+            print("Active")
+        else: 
+            print("Unactive")
+
+    def update(self, event_list):
+
         """Called each frame to update market UI based on user interaction."""
-        for event in events:
-            if self.is_active:
-                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if self.rect.collidepoint(event.pos): #HERE
-                        self.get_container_drag_initiation(event, self.tab_index)
-                    elif not self.market_is_pinned and not self.rect.collidepoint(event.pos) and self.is_active:
-                        self.toggle()
-                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                    if self.dragging_item:
-                        self.place_item(event)
+        for event in event_list:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if not self.market_is_pinned and not self.clickable_rect.collidepoint(event.pos) and self.is_active:
+                    self.toggle()
+                    print("Clicked outside market, closing...")  # Debugging
+                else:
+                    self.get_container_drag_initiation(event, self.tab_index)
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if self.dragging_item:
+                    self.place_item(event)
 
         # Update tab btns and market open state.
-        for event in events:
+        for event in event_list:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.rect.collidepoint(event.pos) and self.is_active:
                     for btn in self.tab_btns:
@@ -577,18 +753,17 @@ class Market:
 
         if self.is_animating:
             current_time = pygame.time.get_ticks() - self.start_time  # Calculate elapsed time
-            distance = self.rect.width  # Move its own width to the right
-            self.rect.x = self.screen.get_size()[0] - self.rect.width + other.formulas.ease_out_expo(current_time, 0, distance, 1000)  # Update position
+            distance = -self.rect.width  # Move its own width to the right
+            self.rect.x = self.screen.get_size()[0] - self.rect.width + other.formulas.ease_out_expo(current_time, self.rect.width, distance, 750)  # Update position
             
             # Check if the animation is complete
-            if current_time >= 1000:  # Assuming the animation lasts 1000 ms
+            if current_time >= 750:  # Assuming the animation lasts 1000 ms
                 self.is_animating = False  # Stop the animation
-
-        # Draw defenses for the currently focused tab (based on the focused btn)
+                
         if self.is_active:
-            #Drawing
+            self.update_buttons()  # Update button positions
             if not self.is_ghost_active:
-                pygame.draw.rect(screen, self.current_color, self.rect)
+                pygame.draw.rect(screen, self.color, self.rect)
                 for container_index in range(len(self.get_filtered_defenses(self.tab_index))):
                     container_rect = self.get_container_rect(container_index)
                     pygame.draw.rect(screen, (15, 15, 15), container_rect, border_radius=12)
@@ -607,7 +782,7 @@ class Market:
                         self.pin_btn_pressed = False
                     self.pin_btn.current_color = (255, 255, 255) if self.market_is_pinned else (150, 150, 150)
                 focused_tab_index = self.tab_btns.index(self.focused_btn)
-                self.tab_type = self.defensetypes[focused_tab_index]  #behövs?
+                self.tab_type = self.defense_types[focused_tab_index]  #behövs?
                 self.get_filtered_defenses(focused_tab_index)
                 self.draw_defenses_for_tab(self.get_filtered_defenses(focused_tab_index))
                 
@@ -621,78 +796,58 @@ class Market:
             self.placement_flash_inst.update()
             self.placement_flash_inst.draw()
             
-    def draw_defenses(self, screen):
-        """
-        Draws all placed defenses so they remain visible regardless
-        of whether the market menu is open.
-        """
-        for defense in self.placed_defenses:
-            if isinstance(defense, barrier.Barrier) and self.is_near_path(defense.pos, tolerance=10) and self.get_path_orientation(defense.pos) == "horizontal":
-                defense.angle = 90
-            defense.draw()
+def make_market(
+        screen,
+        screen_width,
+        screen_height,
+        margin=0,
+        xpos=None,  # Default to None if not provided
+        ypos=0,
+        width=175,
+        height=450,
+        text="Items...",
+        color=None,  # Use None or default it to a theme later
+        text_color=(255, 255, 255),
+        defense_types=None,  # Default to None to avoid mutable default arguments
+        defense_list=None,   # Same as above
+        container_spacing=5,
 
-    def toggle(self):
-        """Toggles the market state (open/close)."""
-        self.market_has_been_opened = True
-        self.is_active = not self.is_active
-        self.btn_is_active = not self.btn_is_active
+    ):
 
-        if self.is_active:
-            self.start_time = pygame.time.get_ticks()  # Record the start time
-            self.is_animating = True  # Start animation when opening the market
-        # No action required
-def make_market(screen, width=175, height=450):
-    return Market(screen, width=width, height=height)
+    if xpos is None:
+        xpos = screen_width - width  # Set DYNamically
+
+    # Provide default values if None was passed
+    if color is None:
+        color = other.constants.color_theme
+    if defense_types is None:
+        defense_types = ["default", "special", "other"]
+    if defense_list is None:
+        defense_list = []
+
+    return Market(
+        screen,
+        screen_width,
+        screen_height,
+        margin,
+        xpos,
+        ypos,
+        width,
+        height,
+        text,
+        color,
+        text_color,
+        defense_types,
+        defense_list,
+        container_spacing,
+    )
 
 def update_market(event_list, market_instance, market_btn):
-    """
-    Handle market button and market toggle events.
-    Returns the updated event_list (with MOUSEBUTTONDOWN events removed, if needed)
-    and the current mouse position.
-    """
     cached_mouse_pos = pygame.mouse.get_pos()
+    
     if market_btn.update(event_list, cached_mouse_pos) and market_instance.btn_is_active:
-        print("Market button clicked")
-        market_instance.toggle()
-        market_instance.is_active = True
+        market_instance.toggle()  # This should handle activation internally
         # Remove MOUSEBUTTONDOWN events to prevent click propagation
         event_list = [e for e in event_list if e.type != pygame.MOUSEBUTTONDOWN]
-    elif market_instance.update(event_list) and market_instance.is_active:
-        market_instance.toggle()
-        market_instance.is_active = False
-    return event_list, cached_mouse_pos
     
-
-#class Upgradebtn:
-    def __init__(self, x, y, width, height, container_index):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.color = (50, 205, 50)
-        self.hover_color = (70, 225, 70)
-
-    def draw(self, screen):    # Calculate the container index (assuming row-major order).
-        container_index = Market.row * Market.num_cols + Market.col
-        if self.inventory[container_index]:
-            # Define the upgrade btn dimensions and position.
-            upgrade_btn_width = 20
-            upgrade_btn_height = 20
-            upgrade_btn_color = (50, 205, 50)
-            btn_padding = 2
-            btn_x = Market.rect.x + Market.container_size - upgrade_btn_width - btn_padding
-            btn_y = Market.rect.y + Market.container_size - upgrade_btn_height - btn_padding
-            upgrade_btn_rect = pygame.Rect(btn_x, btn_y, upgrade_btn_width, upgrade_btn_height)
-            
-            # Draw a green rounded rectangle as the upgrade btn.
-            pygame.draw.rect(screen, (upgrade_btn_color), upgrade_btn_rect, border_radius=5)
-            if Market.cached_mouse_pos.collidepoint(upgrade_btn_rect):
-                current_upgrade_btn_color[container_index] = (70, 225, 70)
-                if pygame.mouse.get_pressed()[0]:
-                    self.current_upgrades[container_index] += 1
-                    print(f"Upgraded container {container_index} to level {self.current_upgrades[container_index]}")
-            # Draw a white upward arrow on the upgrade btn.
-            arrow_points = [
-                (btn_x + upgrade_btn_width // 2, btn_y + 4),
-                (btn_x + 4, btn_y + upgrade_btn_height - 4),
-                (btn_x + upgrade_btn_width - 4, btn_y + upgrade_btn_height - 4)
-            ]
-            pygame.draw.polygon(screen, (255, 255, 255), arrow_points)
-
+    return event_list, cached_mouse_pos

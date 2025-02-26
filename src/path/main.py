@@ -1,9 +1,9 @@
 from pathgen import generate_path_points
 import pygame
 import pathgen
-import defenses.reverser as reverser
+import defenses.reverser
 
-reverser_inst = reverser.Reverse()
+reverser_inst = defenses.reverser.Reverse()
 
 # Assuming `screen` is your Pygame display surface
 # path_points is the list of points returned from `generate_path_points`

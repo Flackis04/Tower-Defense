@@ -1,4 +1,6 @@
 import pygame
+import os
+import sys
 
 def show_game_over(screen, width, height, clock):
     """

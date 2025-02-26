@@ -4,6 +4,7 @@ import bisect
 enemies_list = []
 
 class Enemy:
+    # Define casual colors for each tier.
     tier_to_color = {
         1: (255, 0, 0),       # red
         2: (0, 0, 255),       # blue
@@ -76,6 +77,7 @@ class Enemy:
                 return True
         return False
     
+    @staticmethod
     def update_enemy_escapes(enemies_list, cumulative_lengths, player_hp):
         """
         Remove enemies that have reached the end of the path and subtract their damage
@@ -90,6 +92,7 @@ class Enemy:
             enemies_list.remove(enemy)
         return player_hp
 
+    @staticmethod
     def update_enemies(enemies_list, enemy_spawner, dt, path_points, cumulative_lengths):
         """
         Spawn new enemies, add them to the list, and update each enemy's state.
@@ -100,11 +103,19 @@ class Enemy:
             enemy.update(path_points, cumulative_lengths)
 
     def draw(self):
-        pygame.draw.circle(self.screen, self.color, (int(self.posx), int(self.posy)), self.radius, 5)
+        """
+        Draw the enemy as a circle using its casual color.
+        """
+        pygame.draw.circle(
+            self.screen, 
+            self.color, 
+            (int(self.posx), int(self.posy)), 
+            self.radius
+        )
 
 def make_enemies():
     return []  # Return an empty list properly
 
 def draw_enemies(enemies_list):
     for enemy in enemies_list:
-        enemy.draw()  # Call draw() on each Enemy instance
+        enemy.draw()  # Draw each enemy as a circle
