@@ -16,27 +16,31 @@ import ui.effects as effects
 import other.formulas
 import enemies
 
+import pygame
+
+
+
 class Button:
     def __init__(
             self,
-            market,
-            xpos,
-            ypos,
-            width,
-            height,
-            border_radius,
-            text,
-            font,
-            text_size,
-            bold,
-            icon,
-            color,
-            hover_color,
-            text_color,
-            transition_time,
+            market=None,
+            xpos=0,
+            ypos=0,
+            width=100,
+            height=40,
+            border_radius=5,
+            text="Button",
+            font="Arial",
+            text_size=20,
+            bold=False,
+            icon=None,
+            color=(200, 200, 200),
+            hover_color=(150, 150, 150),
+            text_color=(0, 0, 0),
+            transition_time=0.2,
             on_click=None,
             on_hover=None,
-            toggle=False,
+            toggle=False
         ):
             self.market = market
             self.xpos = xpos  # Store position
@@ -57,6 +61,7 @@ class Button:
 
             # Create button rectangle
             self.rect = pygame.Rect(self.xpos, self.ypos, self.width, self.height)
+        
 
             # Transition / hover state
             self.transition_start = None  # Track transition start time
@@ -73,11 +78,12 @@ class Button:
         text_rect = text_surface.get_rect(center=self.rect.center)
         surface.blit(text_surface, text_rect)
 
-    def is_hovered(self, mouse_pos):
-        return self.rect.collidepoint(mouse_pos)
+    def is_hovered(self):
+        return self.rect.collidepoint(pygame.mouse.get_pos())
 
-    def update(self, events, cached_mouse_pos):
-        is_hovering = self.is_hovered(cached_mouse_pos)
+    def update(self):
+        
+        is_hovering = self.is_hovered()
 
         # Start transition if hover state changes
         if is_hovering != self.hovering:
@@ -87,15 +93,20 @@ class Button:
             if self.on_hover and is_hovering:
                 self.on_hover()
 
-        # Handle smooth transition
-        if self.transition_start is not None:
+                # Handle smooth transition
+        if self.transition_start is not None and self.transition_time:  # Ensure transition_time is valid
             elapsed = time.time() - self.transition_start
-            t = min(elapsed / self.transition_time, 1)  # Normalize to [0, 1]
-            self.current_color = self.lerp(self.color, self.hover_color, t) if self.hovering else self.lerp(self.hover_color, self.color, t)
+            t = min(elapsed / self.transition_time, 1) if self.transition_time else 1  # Avoid division by None
+
+            if self.hovering:
+                self.current_color = self.lerp(self.color, self.hover_color, t) if self.hover_color else self.color
+            else:
+                self.current_color = self.lerp(self.hover_color, self.color, t) if self.hover_color else self.color
 
             # Stop transition if completed
             if t >= 1:
                 self.transition_start = None
+
 
     def handle_event(self, event_list):
             """Handles button click events and stops propagation by removing the event."""
@@ -117,7 +128,6 @@ class Button:
             int(color1[1] + (color2[1] - color1[1]) * t),
             int(color1[2] + (color2[2] - color1[2]) * t),
         )
-
 
 # --- New Container class for inventory management ---
 class Container:
@@ -209,16 +219,15 @@ class Market:
         self.focused_btn = None
         self.tab_btns = []
         self.tab_type = None
-        self.cached_mouse_pos = None
         self.orientation = None
 
         # Defense-related attributes
         self.defense_types = defense_types
         self.defense_list = [
-            cannon.Cannon(self.screen, market=self, enemy_list=enemies.enemies_list, width=4, height=4, hp=250, dmg=1, cost=1000, scope=400, tags=("default", "aim"), has_front=False, front_img=False),
-            barrier.Barrier(self.screen, market=self, enemy_list=enemies.enemies_list, width=50, height=50, hp=50, dmg=1, cost=500, scope=False, tags=("other",), has_front=False, front_img=False),
-            mortar.Mortar(self.screen, market=self, enemy_list=enemies.enemies_list, width=4, height=4, hp=300, dmg=3, cost=5000, scope=300, tags=("default", "aim"), has_front=False, front_img=False),
-            reverser.Reverse(self.screen, market=self, enemy_list=enemies.enemies_list, width=35, height=50, hp=50, dmg=1, cost=500, scope=50, tags=("other",), has_front=False, front_img=False)
+            cannon.Cannon(self.screen, market=self, enemies_list=enemies.enemies_list, width=4, height=4, hp=250, dmg=1, cost=1000, scope=400, tags=("default", "aim"), has_front=False, front_img=False),
+            barrier.Barrier(self.screen, market=self, enemies_list=enemies.enemies_list, width=50, height=50, hp=50, dmg=1, cost=500, scope=False, tags=("other"), has_front=False, front_img=False),
+            mortar.Mortar(self.screen, market=self, enemies_list=enemies.enemies_list, width=4, height=4, hp=300, dmg=3, cost=5000, scope=300, tags=("default", "aim"), has_front=False, front_img=False),
+            reverser.Reverse(self.screen, market=self, enemies_list=enemies.enemies_list, width=35, height=50, hp=50, dmg=1, cost=500, scope=50, tags=("other",), has_front=False, front_img=False)
             
         ]
 
@@ -338,15 +347,41 @@ class Market:
             text_size=10,
             bold=False,
             icon=None,
-            color=(150, 150, 150),
-            hover_color=(180, 180, 180),
+            color=(150, 150, 150),  # Default gray
+            hover_color=None,
             text_color=(255, 255, 255),
-            transition_time=0.15,
-            on_click=lambda: print("Pin Clicked"),
+            transition_time=0.25,
+            on_click=lambda: self.toggle_pin(),  # Call toggle_pin when clicked
             on_hover=None,
             toggle=False
         )
+
         self.btn_list.append(self.pin_btn)
+        # Initialize state variables
+        self.pin_btn_pressed = False
+        self.market_is_pinned = False
+
+    def toggle_pin(self):
+        """Toggle pin button state and update market pin state."""
+        self.pin_btn.toggle = not self.pin_btn.toggle  # Toggle state
+        self.market_is_pinned = self.pin_btn.toggle  # Sync market pin state
+
+    def update_pin_button(self):
+        """Handles pin button events, updates its color, and draws it."""
+        # Update button color based on toggle state:
+        self.pin_btn.current_color = (255, 255, 255) if self.pin_btn.toggle else (150, 150, 150)
+        # Check for mouse interaction on the pin button:
+        if self.pin_btn.rect.collidepoint(pygame.mouse.get_pos()):
+            if pygame.mouse.get_pressed()[0]:
+                if not self.pin_btn_pressed:
+                    self.toggle_pin()
+                    self.pin_btn_pressed = True
+            else:
+                self.pin_btn_pressed = False
+        # Draw the pin button on the screen:
+        self.pin_btn.draw(self.screen)
+
+
 
     def on_tab_click(self, index):
         """Handles tab button click."""
@@ -373,9 +408,9 @@ class Market:
                 bold=False,
                 icon=None,
                 color=self.non_focus_color,
-                hover_color=self.focus_color,
+                hover_color=None,
                 text_color=(255, 255, 255),
-                transition_time=0.2,
+                transition_time=None,
                 on_click=lambda i=i: self.on_tab_click(i),  # Fix on_click
                 on_hover=None,
                 toggle=False
@@ -467,35 +502,33 @@ class Market:
         """Handles dragging logic for a defense item."""
         if not defense:
             return  # Avoid errors if defense is None
-        
+
         self.is_ghost_active = True
 
-        # Get current mouse position as a tuple.
-        mouse_pos = pygame.mouse.get_pos()
+        # Update the defense's position with the current mouse position.
+        defense.pos = pygame.mouse.get_pos()
 
-        # Always update the defense's position.
-        defense.pos = mouse_pos
+        # Check if the current mouse position is near the path (tolerance 15).
+        near_path = self.is_near_path(defense.pos, tolerance=15)
 
-        # Check if the current mouse position is near the path.
-        # Adjust the tolerance value as needed.
-        # 15 is golden
-        near_path = self.is_near_path(mouse_pos, tolerance=15)
-
+        # If the defense is a Barrier, apply barrier-specific logic.
         if isinstance(defense, barrier.Barrier):
             if near_path:
-                defense.rotate
+                # If intended as a method call, consider changing to defense.rotate()
+                defense.rotate  
                 defense.angle = 90
                 defense.isrotated = True
-            
             defense.front_img = False
-            defense.draw()
-        else:
-            defense.draw()
-        # Validate placement (flash if invalid)
+
+        # Draw the defense item.
+        defense.draw()
+
+        # Validate placement (flash if invalid).
         if not self.is_placeable(defense.pos, defense):
             self.placement_flash_inst.trigger()
         else:
             self.placement_flash_inst.stop()
+
     
     def get_container_rect(self, container_index): #local container index instead
         # Calculate the total grid dimensions.
@@ -642,6 +675,8 @@ class Market:
 
         if not self.screen.get_rect().collidepoint(point):
             return False  # Ensure point is inside the screen
+        
+        "HERE"
 
         # Get the orientation and check if the path is continuous at this point
         self.orientation, continuous = self.get_continuous_path_orientation(point)
@@ -673,7 +708,7 @@ class Market:
                 placed_defense = type(self.dragging_item)(
                     self.screen, 
                     market=self, 
-                    enemy_list=self.dragging_item.enemies_list, 
+                    enemies_list=self.dragging_item.enemies_list, 
                     width=self.dragging_item.width, 
                     height=self.dragging_item.height, 
                     hp=self.dragging_item.hp, 
@@ -748,7 +783,7 @@ class Market:
                     if not self.market_is_pinned:
                         self.is_active = False
 
-    def draw(self, screen, cached_mouse_pos):
+    def draw(self, screen):
         """Called each frame to KEEP updated market UI on display."""
 
         if self.is_animating:
@@ -771,16 +806,9 @@ class Market:
                     btn.draw(self.screen)
                 if self.tab_btns:
                     self.focused_btn.current_color = self.focus_color
-                self.pin_btn.draw(self.screen)
-                if self.pin_btn.rect.collidepoint(cached_mouse_pos):
-                    pygame.draw.rect(screen, (255, 255, 255), self.pin_btn.rect, 0, border_radius=1)
-                    if pygame.mouse.get_pressed()[0]:
-                        if not self.pin_btn_pressed:
-                            self.market_is_pinned = not self.market_is_pinned
-                            self.pin_btn_pressed = True
-                    else:
-                        self.pin_btn_pressed = False
-                    self.pin_btn.current_color = (255, 255, 255) if self.market_is_pinned else (150, 150, 150)
+
+                self.update_pin_button()
+
                 focused_tab_index = self.tab_btns.index(self.focused_btn)
                 self.tab_type = self.defense_types[focused_tab_index]  #behövs?
                 self.get_filtered_defenses(focused_tab_index)
@@ -840,14 +868,14 @@ def make_market(
         defense_types,
         defense_list,
         container_spacing,
-    )
+    ) 
 
-def update_market(event_list, market_instance, market_btn):
-    cached_mouse_pos = pygame.mouse.get_pos()
-    
-    if market_btn.update(event_list, cached_mouse_pos) and market_instance.btn_is_active:
+def update_market(event_list, market_instance, button_instance):
+    if button_instance.handle_event(event_list) and market_instance.btn_is_active:
         market_instance.toggle()  # This should handle activation internally
+
         # Remove MOUSEBUTTONDOWN events to prevent click propagation
         event_list = [e for e in event_list if e.type != pygame.MOUSEBUTTONDOWN]
-    
-    return event_list, cached_mouse_pos
+
+    return event_list
+

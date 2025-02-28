@@ -6,8 +6,8 @@ import defenses.defense
 import defenses.projectile
 
 class Cannon(defenses.defense.Defense):
-    def __init__(self, screen, market, enemy_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img):
-        super().__init__(screen, market, enemy_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img)
+    def __init__(self, screen, market, enemies_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img):
+        super().__init__(screen, market, enemies_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img)
         self.cannon_base = pygame.image.load("assets/cannon/base.png").convert_alpha()
         self.cannon_pipe = pygame.image.load("assets/cannon/pipe.png").convert_alpha()
         self.cannon_pipe_original = self.cannon_pipe.copy()

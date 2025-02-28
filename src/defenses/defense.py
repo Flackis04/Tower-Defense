@@ -26,7 +26,7 @@ class Defense:
         self.selected = False
         self.pos = None
         self.angle = 0
-                
+
     def get_rect(self):
         if self.pos is not None:
             x, y = self.pos
@@ -35,9 +35,10 @@ class Defense:
         w, h = self.height*1.25, self.width*1.25
         return pygame.Rect(x - w // 2, y - h // 2, w, h)
     
-    def handle_event(self, event, mouse_pos):
+    def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # If the cannon itself is clicked, toggle its selection.
+            mouse_pos = pygame.mouse.get_pos()
             if self.get_rect().collidepoint(mouse_pos):
                 self.selected = not self.selected
             # If already selected, check if the sell button was clicked.
@@ -89,7 +90,7 @@ class Defense:
             if defense in market_instance.placed_defenses:
                 market_instance.placed_defenses.remove(defense)
 
-    def update_defenses_events(market_instance, event_list, cached_mouse_pos):
+    def update_defenses_events(market_instance, event_list):
         """
         Update defenses that require aiming and event handling.
         """
@@ -98,7 +99,7 @@ class Defense:
             if "aim" in defense.tags:
                 defense.aim_at_enemy()
                 for event in event_list:
-                    defense.handle_event(event, cached_mouse_pos)
+                    defense.handle_event(event)
 
     def get_distance(self, pos1, pos2):
         return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
@@ -106,9 +107,11 @@ class Defense:
     def get_closest_enemy(self):
         closest_enemy = None
         scope_distance = self.scope
-        # Reference the global enemy list from the enemies module
+
         for enemy in enemies.enemies_list:
-            distance = self.get_distance(self.pos, enemy.get_position())
+            distance = self.get_distance(self.pos, (enemy.posx, enemy.posy))
+            # Now you can use 'distance' as needed, e.g. check if the enemy is in range.
+
             if distance < scope_distance:
                 scope_distance = distance
                 closest_enemy = enemy

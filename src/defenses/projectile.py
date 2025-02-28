@@ -16,4 +16,3 @@ class Projectile:
 
     def draw_projectile(self, screen):
         """Draw the projectile (for debugging or effect purposes)."""
-        pygame.draw.rect(screen, (200, 0, 0), self.rect)

@@ -3,8 +3,8 @@ import path.pathgen
 import defenses.barrier as barrier
 
 class Reverse(barrier.Barrier):
-    def __init__(self, screen, market, enemy_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img):
-        super().__init__(screen, market, enemy_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img)
+    def __init__(self, screen, market, enemies_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img):
+        super().__init__(screen, market, enemies_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img)
         self.start_point = None
         self.end_point = None
         self.scope = scope

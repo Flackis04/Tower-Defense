@@ -2,6 +2,13 @@ import math
 import ctypes
 import pygame
 
+# --- Parameters ---
+width, height = 800, 600
+pathwidth = 35  # the constant width of the path (as used in get_path_polygon)
+# You can set the "margin" for the falloff (if a pixel is outside the band, how fast should the factor drop)
+# Here we choose margin = half the pathwidth so that pixels more than pathwidth away from the band get factor 0.
+default_margin = pathwidth / 2.0
+
 def catmull_rom_spline(points, points_per_segment):
     """
     Given a list of points, generate a Catmull-Rom spline that interpolates between them.
@@ -78,6 +85,51 @@ def calculate_angle(points):
         angles.append(angle_degrees)
     
     return angles
+
+# --- Helper function to compute a 0-1 factor for one coordinate ---
+def coordinate_factor(pixel_coord, center_coord, half_width, margin):
+    """
+    Returns 1 if pixel_coord is within [center_coord - half_width, center_coord + half_width].
+    Otherwise, returns a linearly decreasing value from 1 to 0 over a distance of 'margin'.
+    """
+    if center_coord - half_width <= pixel_coord <= center_coord + half_width:
+        return 1.0
+    else:
+        # Determine the distance from the nearest band edge.
+        if pixel_coord < center_coord - half_width:
+            dist = (center_coord - half_width) - pixel_coord
+        else:
+            dist = pixel_coord - (center_coord + half_width)
+        # Linear falloff: if dist equals margin or more, factor becomes 0.
+        factor = max(0.0, 1 - (dist / margin))
+        return factor
+
+# --- The Q function as described ---
+def Q(x, y, pathpoints, pathwidth, margin=default_margin):
+    """
+    For a given pixel coordinate (x, y), computes a brightness factor (between 0 and 1)
+    based on how close it is to the path defined by pathpoints.
+    
+    It does this by:
+      - Finding the path point whose x coordinate is closest to x,
+        then comparing the pixel's y to that point's y (with tolerance pathwidth/2).
+      - Finding the path point whose y coordinate is closest to y,
+        then comparing the pixel's x to that point's x.
+      - The final factor is the product of the two individual factors.
+    """
+    half_width = pathwidth / 2.0
+
+    # Find the pathpoint closest in x
+    closest_point_x = min(pathpoints, key=lambda p: abs(x - p[0]))
+    factor_x = coordinate_factor(y, closest_point_x[1], half_width, margin)
+
+    # Find the pathpoint closest in y
+    closest_point_y = min(pathpoints, key=lambda p: abs(y - p[1]))
+    factor_y = coordinate_factor(x, closest_point_y[0], half_width, margin)
+
+    # Combine both factors (multiplying means that both dimensions must be “close” to give 1)
+    return factor_x * factor_y
+
 
 def resample_path(points, step_size):
     """

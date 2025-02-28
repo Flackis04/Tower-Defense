@@ -1,111 +1,118 @@
 import pygame
-import bisect
+import math
+import path.pathgen as path
 
 enemies_list = []
 
 class Enemy:
-    # Define casual colors for each tier.
     tier_to_color = {
-        1: (255, 0, 0),       # red
-        2: (0, 0, 255),       # blue
-        3: (0, 255, 0),       # green
-        4: (255, 255, 0),     # yellow
-        5: (255, 192, 203)    # pink
+        1: (255, 0, 64),       # red
+        2: (64, 0, 255),       # blue
+        3: (0, 255, 64),       # green
+        4: (255, 255, 64),     # yellow
+        5: (64, 255, 255)      # pink
     }
 
-    def __init__(self, screen, hp, color, radius, step, reward):
+    def __init__(self, 
+                screen, 
+                path_points,
+                tier=1,
+                color=None, 
+                radius=15, 
+                speed=75, 
+                reward=10, ):
+        
         self.screen = screen
-        # Use the passed hp as the tier value and current health.
-        self.tier = hp
-        self.hp = hp
+        self.tier = tier
         self.radius = radius
         self.reward = reward
-        self.step = step  # speed factor (e.g., red: 1, green: 2, blue: 3)
-        self.distance = 0.0  # total distance traveled along the path in pixels
-        self.posx, self.posy = self.get_start_position()
-        # Override the color based on the current tier.
-        self.color = Enemy.tier_to_color.get(self.tier, color)
+        self.speed = speed  # Speed in pixels per second now.
+        # Fix: Ensure that path_points is a list, not a function.
+        self.path_points = path_points() if callable(path_points) else path_points
+        self.color = color if color is not None else Enemy.tier_to_color.get((255, 255, 255))
 
-    def get_start_position(self):
-        _, height = self.screen.get_size()
-        return (0 - self.radius, int(height * 0.125))
-    
-    def get_position(self):
-        return (self.posx, self.posy)
+        # Precompute cumulative arc lengths along the path.
+        self.arc_lengths = self.compute_arc_lengths()
+        self.total_length = self.arc_lengths[-1]
 
-    def update(self, path_points, cumulative_lengths):
-        # Increase the traveled distance by the enemy's speed factor.
-        self.distance += self.step
+        # Start at the beginning.
+        self.distance_traveled = 0.0
+        self.posx, self.posy = self.path_points[0]
 
-        total_distance = cumulative_lengths[-1]
-        if self.distance > total_distance:
-            self.distance = total_distance
+    def compute_arc_lengths(self):
+        """Precompute cumulative distances along the path."""
+        arc_lengths = [0]
+        for i in range(1, len(self.path_points)):
+            prev = self.path_points[i - 1]
+            curr = self.path_points[i]
+            segment_length = math.sqrt((curr[0] - prev[0])**2 + (curr[1] - prev[1])**2)
+            arc_lengths.append(arc_lengths[-1] + segment_length)
+        return arc_lengths
 
-        # Use binary search to locate the segment where the enemy is.
-        segment_index = bisect.bisect_right(cumulative_lengths, self.distance) - 1
-        if segment_index >= len(path_points) - 1:
-            self.posx, self.posy = path_points[-1]
+    def update(self, dt):
+        """
+        Move the enemy uniformly along the path based on arc-length.
+        dt: delta time in milliseconds.
+        """
+        dt_sec = dt / 1000.0  # convert milliseconds to seconds
+        if self.distance_traveled < self.total_length:
+            # Increment distance based on speed and delta time.
+            self.distance_traveled += self.speed * dt_sec
+            if self.distance_traveled > self.total_length:
+                self.distance_traveled = self.total_length
+
+            # Determine the current segment.
+            segment_index = 0
+            for i in range(len(self.arc_lengths) - 1):
+                if self.arc_lengths[i] <= self.distance_traveled <= self.arc_lengths[i + 1]:
+                    segment_index = i
+                    break
+
+            segment_start = self.arc_lengths[segment_index]
+            segment_end = self.arc_lengths[segment_index + 1]
+            segment_length = segment_end - segment_start
+
+            # Calculate progress within the segment.
+            t = (self.distance_traveled - segment_start) / segment_length if segment_length != 0 else 0
+
+            # Interpolate between segment endpoints.
+            start_point = self.path_points[segment_index]
+            end_point = self.path_points[segment_index + 1]
+            self.posx = (1 - t) * start_point[0] + t * end_point[0]
+            self.posy = (1 - t) * start_point[1] + t * end_point[1]
         else:
-            seg_start_distance = cumulative_lengths[segment_index]
-            seg_end_distance = cumulative_lengths[segment_index + 1]
-            segment_length = seg_end_distance - seg_start_distance
-            fraction = 0
-            if segment_length > 0:
-                fraction = (self.distance - seg_start_distance) / segment_length
-
-            x1, y1 = path_points[segment_index]
-            x2, y2 = path_points[segment_index + 1]
-            self.posx = x1 + fraction * (x2 - x1)
-            self.posy = y1 + fraction * (y2 - y1)
+            # Snap to the final position.
+            self.posx, self.posy = self.path_points[-1]
 
     def pop(self):
-        """
-        Called when the enemy's hp reaches 0.
-        If the enemy is not at the lowest tier (tier 1), then update the tier,
-        reset hp to the new tier, and update its color so that it reappears.
-        Return False to indicate the enemy remains in play.
-        If already at tier 1, return True to signal full pop and removal.
-        """
         if self.hp <= 0:
             if self.tier > 1:
                 self.tier -= 1
-                self.hp = self.tier  # Reset hp to the new tier value.
+                self.hp = self.tier
                 self.color = Enemy.tier_to_color[self.tier]
-                # Optionally, trigger a pop effect here.
                 return False
             else:
                 return True
         return False
-    
+
     @staticmethod
-    def update_enemy_escapes(enemies_list, cumulative_lengths, player_hp):
-        """
-        Remove enemies that have reached the end of the path and subtract their damage
-        from the player's HP.
-        """
-        enemies_escaped = []
-        for enemy in enemies_list:
-            if enemy.distance >= cumulative_lengths[-1]:
-                enemies_escaped.append(enemy)
+    def update_enemy_escapes(enemies_list, player_hp):
+        """Remove enemies that have reached the end of the path."""
+        enemies_escaped = [enemy for enemy in enemies_list if enemy.distance_traveled >= enemy.total_length]
         for enemy in enemies_escaped:
-            player_hp -= enemy.tier * 5  # Adjust damage cost as desired.
+            player_hp -= enemy.tier * 5  # Adjust damage as desired.
             enemies_list.remove(enemy)
         return player_hp
 
     @staticmethod
-    def update_enemies(enemies_list, enemy_spawner, dt, path_points, cumulative_lengths):
-        """
-        Spawn new enemies, add them to the list, and update each enemy's state.
-        """
+    def update_enemies(enemies_list, enemy_spawner, dt):
+        """Spawn new enemies and update all enemy positions with dt."""
         new_enemies = enemy_spawner.update(dt)
         enemies_list.extend(new_enemies)
         for enemy in enemies_list:
-            enemy.update(path_points, cumulative_lengths)
+            enemy.update(dt)
 
     def draw(self):
-        """
-        Draw the enemy as a circle using its casual color.
-        """
         pygame.draw.circle(
             self.screen, 
             self.color, 
@@ -113,9 +120,9 @@ class Enemy:
             self.radius
         )
 
-def make_enemies():
-    return []  # Return an empty list properly
-
 def draw_enemies(enemies_list):
     for enemy in enemies_list:
-        enemy.draw()  # Draw each enemy as a circle
+        enemy.draw()
+
+def get_path(width, height):
+    return path.generate_path_points(width, height)

@@ -1,7 +1,15 @@
 import pygame
 import random
 import numpy as np
+import sys
+sys.path.append(r'C:\Users\Laptop\Documents\ws\program\src')
+from market import make_market
 from scipy.ndimage import gaussian_filter
+
+pygame.init()
+screen = pygame.display.set_mode((800, 600))  # Create a Pygame screen
+market_inst = make_market(screen, 800, 600)
+#window size öppnar möjligheten för att välja starting point.
 
 def generate_smooth_noise_background(width, height, scale=100):
     pygame.init()
