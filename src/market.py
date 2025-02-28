@@ -485,7 +485,7 @@ class Market:
     def get_container_drag_initiation(self, event, tab_index):
         for defense in self.get_filtered_defenses(tab_index):
             container_rect = self.get_container_rect(defense.container_index)
-            if container_rect.collidepoint(event.pos):
+            if container_rect.collidepoint(event.pos) and self.is_active:
                 if self.focused_btn == self.tab_btns[tab_index]:
                     if economy.balance >= defense.cost:
                         self.dragging_item = defense
