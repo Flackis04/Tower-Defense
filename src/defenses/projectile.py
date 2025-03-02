@@ -12,7 +12,7 @@ class Projectile:
 
     def fire(self):
         print("Fire!")
-        self.rect.x += self.speed 
+        #self.rect.x += self.speed 
 
     def draw_projectile(self, screen):
         """Draw the projectile (for debugging or effect purposes)."""

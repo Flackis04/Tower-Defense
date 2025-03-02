@@ -1,13 +1,31 @@
 import pygame
 import path.pathgen
 import defenses.barrier as barrier
+import enemies.enemies as enemies
 
 class Reverse(barrier.Barrier):
-    def __init__(self, screen, market, enemies_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img):
-        super().__init__(screen, market, enemies_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img)
+    def __init__(self, **kwargs):
+        defaults = {
+            "screen": pygame.display.get_surface(),
+            "market": None,
+            "enemies_list": enemies.enemies_list,
+            "width": 35,
+            "height": 50,
+            "hp": 50,
+            "dmg": 1,
+            "cost": 500,
+            "scope": 50,
+            "tags": ("other",),
+            "is_composite": False,
+            "has_front": False,
+            "use_front": False,
+        }
+        defaults.update(kwargs)
+        super().__init__(**defaults)
+        
+
         self.start_point = None
         self.end_point = None
-        self.scope = scope
         x, y = 0, 0
         x, y = pygame.mouse.get_pos()
         self.rect = pygame.Rect(x, y, self.width, self.height)
@@ -37,6 +55,3 @@ class Reverse(barrier.Barrier):
         market_inst = market.Market
         if market_inst.is_near_path:
             print("yes")
-
-    def draw(self):    
-        pygame.draw.rect(self.screen, (0,45,128), self.rect)

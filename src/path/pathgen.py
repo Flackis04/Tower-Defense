@@ -161,6 +161,16 @@ def resample_path(points, step_size):
     
     return resampled_points
 
+def compute_arc_lengths(path_points):
+    """Precompute cumulative distances along the path."""
+    arc_lengths = [0]
+    for i in range(1, len(path_points)):
+        prev = path_points[i - 1]
+        curr = path_points[i]
+        segment_length = math.sqrt((curr[0] - prev[0])**2 + (curr[1] - prev[1])**2)
+        arc_lengths.append(arc_lengths[-1] + segment_length)
+    return arc_lengths
+
 def generate_path_points(width, height, step_size=1, default_radius=50, points_per_segment=250):
     """
     Generate a smooth path using a Catmull-Rom spline.
@@ -193,6 +203,7 @@ def cumulative_distances(points):
     for i in range(1, len(points)):
         distances.append(distances[-1] + calculate_distance(points[i - 1], points[i]))
     return distances
+    
 
 def get_path_polygon(points, width):
     """

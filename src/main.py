@@ -1,14 +1,16 @@
 import pygame
 import path.pathgen as pathgen
 import market
-import enemies
-import spawner
+import enemies.enemies as enemies
+import enemies.spawner as spawner
 import defenses.defense as defense
 import defenses.projectile as projectile
 import defenses.barrier as barrier
 import ui.text as text
 import ui.game_over
 import ui.ui_renderer
+import ui.home
+import other.constants as constants
 
 def draw_fps(screen, clock, font):
     """Render the FPS counter on the screen."""
@@ -29,6 +31,8 @@ def handle_events(market_inst, btn_inst):
     for event in event_list:
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_j):
             return None, None
+        if event.type ==pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            pass
 
     # Process market button events.
     for btn in market_inst.btn_list:
@@ -62,16 +66,18 @@ def main():
     # Initialize game modules and objects.
     enemy_spawner_inst = spawner.EnemySpawner(screen, path_points)
     market_inst = market.make_market(screen, screen_width, screen_height)
-    btn_inst = market.Button(xpos=100, ypos=100, text="Click Me", color=(0, 128, 255), hover_color=(255, 0, 0))
+    btn_inst = market.Button()
     projectile_inst = projectile.Projectile(screen)
-    barrier_inst = barrier.Barrier(
-        screen, market, enemies_list=enemies.enemies_list, width=50, height=50,
-        hp=50, dmg=1, cost=500, scope=False, tags=("other",), has_front=False, front_img=False
-    )
+    barrier_inst = barrier.Barrier(screen=screen, market=market_inst)
     balance_display = text.Balance_Display(screen)
     hp_font = pygame.font.Font(None, 24)
     fps_font = pygame.font.SysFont(None, 30)
     player_hp = 500000
+
+    enemy_spawner_inst.spawning = True
+
+    home = ui.home.Home(screen)  # Create Home instance
+    running_game = True
 
     running = True
     while running:
@@ -81,12 +87,13 @@ def main():
             break
 
         # Limit the framerate and get delta time (in milliseconds).
-        dt_ms = clock.tick(60)
+        dt_ms = clock.tick(120)
 
         # Game state updates.
         # Spawner now only spawns enemies
-        new_enemies = enemy_spawner_inst.update(dt_ms)
-        enemies.enemies_list.extend(new_enemies)
+        if enemy_spawner_inst.spawning and not enemy_spawner_inst.pause_spawn:
+            new_enemies = enemy_spawner_inst.update(dt_ms)
+            enemies.enemies_list.extend(new_enemies)
 
         # Update all enemy positions once using dt
         for enemy in enemies.enemies_list:
@@ -94,10 +101,9 @@ def main():
 
         # Remove or comment out any duplicate update calls such as:
         # enemies.Enemy.update_enemies(enemies.enemies_list, enemy_spawner_inst, dt_ms)
-
+        enemy_spawner_inst.remove_defeated_enemies()
 
         market_inst.update(events)
-        defense.Defense.update_defenses_events(market_inst, events)
         defense.Defense.check_collisions(enemies.enemies_list, market_inst, barrier_inst)
         player_hp = enemies.Enemy.update_enemy_escapes(enemies.enemies_list, player_hp)
 
@@ -107,7 +113,7 @@ def main():
         pathgen.draw_path(screen, path_points)
         enemies.draw_enemies(enemies.enemies_list)
         ui.ui_renderer.draw_ui(
-            screen, market_inst, market_inst.market_btn, balance_display, hp_font, player_hp
+            screen, events, market_inst, market_inst.market_btn, balance_display, hp_font, player_hp
         )
         draw_fps(screen, clock, fps_font)
         pygame.display.flip()

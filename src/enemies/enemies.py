@@ -1,6 +1,5 @@
 import pygame
-import math
-import path.pathgen as path
+import path.pathgen as pathgen
 
 enemies_list = []
 
@@ -10,7 +9,8 @@ class Enemy:
         2: (64, 0, 255),       # blue
         3: (0, 255, 64),       # green
         4: (255, 255, 64),     # yellow
-        5: (64, 255, 255)      # pink
+        5: (255, 64, 255),      # pink
+        6: (0, 0, 0)      # pink
     }
 
     def __init__(self, 
@@ -32,22 +32,13 @@ class Enemy:
         self.color = color if color is not None else Enemy.tier_to_color.get((255, 255, 255))
 
         # Precompute cumulative arc lengths along the path.
-        self.arc_lengths = self.compute_arc_lengths()
+        self.arc_lengths = pathgen.compute_arc_lengths(path_points)
         self.total_length = self.arc_lengths[-1]
 
         # Start at the beginning.
         self.distance_traveled = 0.0
         self.posx, self.posy = self.path_points[0]
-
-    def compute_arc_lengths(self):
-        """Precompute cumulative distances along the path."""
-        arc_lengths = [0]
-        for i in range(1, len(self.path_points)):
-            prev = self.path_points[i - 1]
-            curr = self.path_points[i]
-            segment_length = math.sqrt((curr[0] - prev[0])**2 + (curr[1] - prev[1])**2)
-            arc_lengths.append(arc_lengths[-1] + segment_length)
-        return arc_lengths
+        self.hp = 1
 
     def update(self, dt):
         """
@@ -100,7 +91,7 @@ class Enemy:
         """Remove enemies that have reached the end of the path."""
         enemies_escaped = [enemy for enemy in enemies_list if enemy.distance_traveled >= enemy.total_length]
         for enemy in enemies_escaped:
-            player_hp -= enemy.tier * 5  # Adjust damage as desired.
+            player_hp -= enemy.tier
             enemies_list.remove(enemy)
         return player_hp
 
@@ -125,4 +116,4 @@ def draw_enemies(enemies_list):
         enemy.draw()
 
 def get_path(width, height):
-    return path.generate_path_points(width, height)
+    return pathgen.generate_path_points(width, height)

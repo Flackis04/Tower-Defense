@@ -14,7 +14,7 @@ import defenses.reverser as reverser
 from defenses.defense import Defense
 import ui.effects as effects
 import other.formulas
-import enemies
+import enemies.enemies as enemies
 
 import pygame
 
@@ -196,8 +196,7 @@ class Market:
         self.color = color
         self.current_color = color
         self.text_color = text_color
-        self.non_focus_color = other.constants.color_theme
-        self.focus_color = (50, 50, 205)
+
 
         # Text and font
         self.text = text
@@ -224,10 +223,22 @@ class Market:
         # Defense-related attributes
         self.defense_types = defense_types
         self.defense_list = [
-            cannon.Cannon(self.screen, market=self, enemies_list=enemies.enemies_list, width=4, height=4, hp=250, dmg=1, cost=1000, scope=400, tags=("default", "aim"), has_front=False, front_img=False),
-            barrier.Barrier(self.screen, market=self, enemies_list=enemies.enemies_list, width=50, height=50, hp=50, dmg=1, cost=500, scope=False, tags=("other"), has_front=False, front_img=False),
-            mortar.Mortar(self.screen, market=self, enemies_list=enemies.enemies_list, width=4, height=4, hp=300, dmg=3, cost=5000, scope=300, tags=("default", "aim"), has_front=False, front_img=False),
-            reverser.Reverse(self.screen, market=self, enemies_list=enemies.enemies_list, width=35, height=50, hp=50, dmg=1, cost=500, scope=50, tags=("other",), has_front=False, front_img=False)
+            cannon.Cannon(
+                screen=self.screen,
+                market=self,
+            ),
+            
+            barrier.Barrier(
+                screen=self.screen,
+                market=self,
+            ),
+            
+            mortar.Mortar(
+                screen=self.screen,
+                market=self,
+            ),
+
+            #Reverser
             
         ]
 
@@ -253,7 +264,6 @@ class Market:
         self.make_tab_btns()
         self.setup_inventory()
         self.make_containers() #FIXX SO IT GETS USED
-        self.draw_defenses()
 
         
 
@@ -296,30 +306,54 @@ class Market:
         self.pin_btn.rect.x = self.rect.x + 5
         self.pin_btn.rect.y = self.rect.y + self.rect.height - self.pin_btn.rect.height - 5
         
-    def make_info_btn(self):
-        pass
+    def make_info_btn(self,x,y):
 
-    def make_upgrade_btn(self):
-        """Creates the upgrade button."""
-        upgrade_btn_width = 50
-        upgrade_btn_height = 20
-        upgrade_btn_x = self.rect.x + self.rect.width - upgrade_btn_width - 5  # Align to the right
-        upgrade_btn_y = self.rect.y + self.rect.height - upgrade_btn_height - 5  # Bottom aligned
+        info_btn_width = 15
+        info_btn_height = info_btn_width
 
-        self.upgrade_btn = Button(
+        info_is_seen = False
+
+        self.info_btn = Button(
             self,
-            upgrade_btn_x,
-            upgrade_btn_y,
-            upgrade_btn_width,
-            upgrade_btn_height,
+            x+self.container_size-info_btn_width+3,
+            y-3,
+            info_btn_width,
+            info_btn_height,
             border_radius=3,
-            text="Upgrade",
+            text="i",
             font="Arial",
             text_size=14,
             bold=True,
             icon=None,
-            color=(100, 100, 250),
+            color=other.constants.tabs_focus_color,
             hover_color=(120, 120, 255),
+            text_color=(255, 255, 255),
+            transition_time=0.2,
+            on_click=lambda: print("Upgrade Clicked"),
+            on_hover=None,
+            toggle=False
+        )
+        self.btn_list.append(self.info_btn)
+
+    def make_upgrade_btn(self, x, y):
+        """Creates the upgrade button."""
+        upgrade_btn_width = 20
+        upgrade_btn_height = upgrade_btn_width
+
+        self.upgrade_btn = Button(
+            self,
+            x,
+            y,
+            upgrade_btn_width,
+            upgrade_btn_height,
+            border_radius=3,
+            text="+",
+            font="Arial",
+            text_size=14,
+            bold=True,
+            icon=None,
+            color=other.constants.market_btn_color,
+            hover_color=other.constants.market_btn_hover_color,
             text_color=(255, 255, 255),
             transition_time=0.2,
             on_click=lambda: print("Upgrade Clicked"),
@@ -328,10 +362,49 @@ class Market:
         )
         self.btn_list.append(self.upgrade_btn)
 
+    def make_sell_btn(self, x , y):
+        """Creates the sell button."""
+        sell_btn_width = 20
+        sell_btn_height = sell_btn_width
+
+        self.sell_btn = Button(
+            self,
+            x,
+            y+20,
+            sell_btn_width,
+            sell_btn_height,
+            border_radius=3,
+            text="+",
+            font="Arial",
+            text_size=14,
+            bold=True,
+            icon=None,
+            color=other.constants.sell_btn_color,
+            hover_color=other.constants.market_btn_hover_color,
+            text_color=(255, 255, 255),
+            transition_time=0.2,
+            on_click=lambda: self.refund(self),
+            on_hover=None,
+            toggle=False
+        )
+        self.btn_list.append(self.sell_btn)
+
+    def refund(self):
+        print("hi")
+        refund = self.cost // 2
+        economy.balance += refund
+        if self in self.market.placed_defenses:
+            self.market.placed_defenses.remove(self)
+
+    def draw_defense_ui(self):
+        
+        self.upgrade_btn.draw(self.screen)
+        self.sell_btn.draw(self.screen)
+
     def make_pin_btn(self):
         """Creates the pin button to keep the market open."""
         pin_btn_width = 10
-        pin_btn_height = 10
+        pin_btn_height = pin_btn_width
         pin_btn_x = self.rect.x + 5  # Align with the market's left edge
         pin_btn_y = self.rect.y + self.rect.height - pin_btn_height - 5  # Bottom aligned
 
@@ -407,7 +480,7 @@ class Market:
                 text_size=16,
                 bold=False,
                 icon=None,
-                color=self.non_focus_color,
+                color=other.constants.market_color,
                 hover_color=None,
                 text_color=(255, 255, 255),
                 transition_time=None,
@@ -471,16 +544,16 @@ class Market:
             defense.container_index = Defense.local_container_index
             Defense.local_container_index += 1
 
-    def draw_defenses_for_tab(self, filtered_defenses):
+    def draw_content_for_tab(self, filtered_defenses):
         for defense in filtered_defenses:
             # Only update the position if the defense hasn't been placed yet.
             if defense not in self.placed_defenses and self.is_active:
+                self.make_info_btn(self.get_container_rect(defense.container_index).x, self.get_container_rect(defense.container_index).y)
                 defense.pos = self.get_container_rect(defense.container_index).center
-            defense.front_img = True
-            if getattr(defense, "has_front", False) and getattr(defense, "front_img", False):
-                defense.draw_front_img()
-            else: 
-                defense.draw()
+            if defense.has_front==True:
+                defense.use_front=True
+            defense.draw()
+            self.info_btn.draw(self.screen)
 
     def get_container_drag_initiation(self, event, tab_index):
         for defense in self.get_filtered_defenses(tab_index):
@@ -518,7 +591,7 @@ class Market:
                 defense.rotate  
                 defense.angle = 90
                 defense.isrotated = True
-            defense.front_img = False
+            defense.use_front = False
 
         # Draw the defense item.
         defense.draw()
@@ -534,7 +607,7 @@ class Market:
         # Calculate the total grid dimensions.
         grid_width = self.num_cols * self.container_size + (self.num_cols + 1) * self.container_spacing
         grid_height = self.num_rows * self.container_size + (self.num_rows + 1) * self.container_spacing
-        vertical_offset = 20  # Moves the grid 20 pixels lower.
+        vertical_offset = 20 + 10  # Moves the grid 20 pixels lower.
 
         # Center the grid inside self.rect.
         start_x = self.rect.x + (self.rect.width - grid_width) // 2
@@ -705,20 +778,22 @@ class Market:
                 final_point = snapped_point if snapped_point is not None else self.drop_point
                 
                 # Create a NEW instance instead of modifying the market's version
+                # Collecting attributes from dragging_item and using **kwargs
                 placed_defense = type(self.dragging_item)(
-                    self.screen, 
-                    market=self, 
-                    enemies_list=self.dragging_item.enemies_list, 
-                    width=self.dragging_item.width, 
-                    height=self.dragging_item.height, 
-                    hp=self.dragging_item.hp, 
-                    dmg=self.dragging_item.dmg, 
-                    cost=self.dragging_item.cost, 
-                    scope=self.dragging_item.scope, 
-                    tags=self.dragging_item.tags, 
-                    has_front=self.dragging_item.has_front, 
-                    front_img=self.dragging_item.front_img
+                    **{  
+                        "enemies_list": self.dragging_item.enemies_list, 
+                        "width": self.dragging_item.width, 
+                        "height": self.dragging_item.height, 
+                        "hp": self.dragging_item.hp, 
+                        "dmg": self.dragging_item.dmg, 
+                        "cost": self.dragging_item.cost, 
+                        "scope": self.dragging_item.scope, 
+                        "tags": self.dragging_item.tags, 
+                        "has_front": self.dragging_item.has_front, 
+                        "use_front": self.dragging_item.use_front
+                    }
                 )
+
                 placed_defense.pos = final_point  # Set position to the placed location
                 
                 self.placed_defenses.append(placed_defense)  # Store the placed defense
@@ -731,15 +806,35 @@ class Market:
             self.dragging_item = None
             self.placement_flash_inst.stop()     
 
-    def draw_defenses(self):
+    def draw_defenses(self, event_list):
         """
         Draws all placed defenses so they remain visible regardless
         of whether the market menu is open.
         """
-        for defense in self.placed_defenses:
-            if isinstance(defense, barrier.Barrier) and self.is_near_path(defense.pos, tolerance=10) and self.get_path_orientation(defense.pos) == "horizontal":
-                defense.angle = 90
-            defense.draw()
+        if len(self.placed_defenses)>0:
+            for defense in self.placed_defenses:
+                if (isinstance(defense, barrier.Barrier) and 
+                    self.is_near_path(defense.pos, tolerance=10) and 
+                    self.get_path_orientation(defense.pos) == "horizontal"):
+                    defense.angle = 90
+                elif "aim" in defense.tags:
+                    defense.aim_at_enemy()  # Call without passing 'self'
+                defense.draw()
+
+                for event in event_list:
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                        mouse_pos = pygame.mouse.get_pos()
+                        x,y = defense.pos
+                        if defense.get_rect().collidepoint(mouse_pos) and defense.selected == False:
+                            if defense.been_selected == False:
+                                defense.been_selected = True
+                                self.make_upgrade_btn(x,y)
+                                self.make_sell_btn(x,y)
+                            defense.selected = True
+                        elif not defense.get_rect().collidepoint(mouse_pos) and defense.selected == True:
+                            defense.selected = False
+            if  defense.selected == True:
+                self.draw_defense_ui()
 
     def toggle(self):
         """Toggles the market state (open/close)."""
@@ -774,9 +869,9 @@ class Market:
                     for btn in self.tab_btns:
                         if btn.rect.collidepoint(event.pos):
                             if self.focused_btn and self.focused_btn != btn:
-                                self.focused_btn.current_color = self.non_focus_color
+                                self.focused_btn.current_color = other.constants.tabs_color
                             self.focused_btn = btn
-                            self.focused_btn.current_color = self.focus_color
+                            self.focused_btn.current_color = other.constants.tabs_focus_color
                             self.tab_index = self.tab_btns.index(btn)
                             break
                 else:
@@ -805,14 +900,14 @@ class Market:
                 for btn in self.tab_btns:
                     btn.draw(self.screen)
                 if self.tab_btns:
-                    self.focused_btn.current_color = self.focus_color
+                    self.focused_btn.current_color = other.constants.tabs_focus_color
 
                 self.update_pin_button()
 
                 focused_tab_index = self.tab_btns.index(self.focused_btn)
                 self.tab_type = self.defense_types[focused_tab_index]  #behövs?
                 self.get_filtered_defenses(focused_tab_index)
-                self.draw_defenses_for_tab(self.get_filtered_defenses(focused_tab_index))
+                self.draw_content_for_tab(self.get_filtered_defenses(focused_tab_index))
                 
             #Logic 
             if self.dragging_item:
@@ -831,14 +926,14 @@ def make_market(
         margin=0,
         xpos=None,  # Default to None if not provided
         ypos=0,
-        width=175,
+        width=179,
         height=450,
         text="Items...",
         color=None,  # Use None or default it to a theme later
         text_color=(255, 255, 255),
         defense_types=None,  # Default to None to avoid mutable default arguments
         defense_list=None,   # Same as above
-        container_spacing=5,
+        container_spacing=13,
 
     ):
 
@@ -847,7 +942,7 @@ def make_market(
 
     # Provide default values if None was passed
     if color is None:
-        color = other.constants.color_theme
+        color = other.constants.market_color
     if defense_types is None:
         defense_types = ["default", "special", "other"]
     if defense_list is None:

@@ -1,28 +1,62 @@
 import pygame
-import enemies
+import enemies.enemies as enemies
 import math
 import economy  # for refunding when selling
-import defenses.defense
+import defenses.defense as defense
 import defenses.projectile
+import pygame
 
-class Cannon(defenses.defense.Defense):
-    def __init__(self, screen, market, enemies_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img):
-        super().__init__(screen, market, enemies_list, width, height, hp, dmg, cost, scope, tags, has_front, front_img)
-        self.cannon_base = pygame.image.load("assets/cannon/base.png").convert_alpha()
-        self.cannon_pipe = pygame.image.load("assets/cannon/pipe.png").convert_alpha()
-        self.cannon_pipe_original = self.cannon_pipe.copy()
-        self.base_rect = self.cannon_base.get_rect(center=self.get_rect().center)
-        self.pipe_rect = self.cannon_pipe.get_rect(center=self.get_rect().center)
+class Cannon(defense.Defense):
+    def __init__(self, **kwargs):
+        # Load images first so we can get their sizes
+        self.img = pygame.image.load("assets/cannon/base.png").convert_alpha()  # Main cannon base
+        self.img2 = pygame.image.load("assets/cannon/pipe.png").convert_alpha()  # Cannon pipe (front part)
+        self.img2_original = self.img2.copy()  # Keep original for rotation
+
+        # Get image dimensions before calling super()
+        img_width, img_height = self.img.get_size()
+
+        # Default values, using the image dimensions
+        defaults = {
+            "screen": pygame.display.get_surface(),
+            "market": None,
+            "enemies_list": enemies.enemies_list,
+            "width": img_width,  # Default width is the image width
+            "height": img_height,  # Default height is the image height
+            "hp": 250,
+            "dmg": 1,
+            "cost": 1000,
+            "scope": 200,
+            "tags": ("default", "aim"),
+            "is_composite": True,
+            "has_front": False,  # Cannon has a separate front part
+            "use_front": False,  # Assign the front_img correctly
+        }
+
+        # Merge defaults with any provided keyword arguments
+        config = {**defaults, **kwargs}
+
+        # Initialize the parent class
+        super().__init__(**config)
+
+        # Assign instance variables
+        self.screen = config["screen"]
+        self.market = config["market"]
+        self.enemies_list = config["enemies_list"]
+        self.hp = config["hp"]
+        self.dmg = config["dmg"]
+        self.cost = config["cost"]
+        self.scope = config["scope"]
+        self.tags = config["tags"]
+        self.has_front = config["has_front"]
+
+        # Update width and height to match the image if they were not overridden
+        self.width, self.height = self.img.get_size()
+
         self.pos = self.get_rect().center  # Set the cannon's position
-        #self.start_time = pygame.time.get_ticks()
-        self.delay = 750
-        self.start_time = 0
-        #self.elapsed_time = self.current_time-self.start_time
 
-    def draw(self):
-        if hasattr(self, 'pos') and self.pos is not None:
-            # Update the rects to be centered at the cannon's position
-            self.base_rect = self.cannon_base.get_rect(center=self.pos)
-            self.pipe_rect = self.cannon_pipe.get_rect(center=self.pos)
-            self.screen.blit(self.cannon_base, self.base_rect)
-            self.screen.blit(self.cannon_pipe, self.pipe_rect)
+        # Timing variables
+        self.delay = 1250
+        self.start_time = 0
+
+        #self.elapsed_time = self.current_time-self.start_time
