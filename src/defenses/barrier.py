@@ -21,22 +21,26 @@ class Barrier(defenses.defense.Defense):
             "scope": False,
             "tags": ("other",),
             "is_composite": False,
-            "has_front": True,
-            "use_front": False,
+            "preview": False,
         }
 
         config = {**defaults, **kwargs}
 
         super().__init__(**config)
 
+        self.screen = config["screen"]
+        self.market = config["market"]
+        self.enemies_list = config["enemies_list"]
+        self.hp = config["hp"]
+        self.dmg = config["dmg"]
+        self.cost = config["cost"]
+        self.scope = config["scope"]
+        self.tags = config["tags"]
+        self.is_composite = config["is_composite"]
+        self.preview = config["preview"]
+
         # Ensure front_img is set correctly AFTER Defense init
         self.front_img = self.front_img or pygame.image.load("assets/barrier/barrier_front.png").convert_alpha()
-
-
-        # Scale images
-        self.img = pygame.transform.scale(self.img, (int(img_width * 2.2), int(img_height * 2.2)))
-        self.front_img = pygame.transform.scale(self.front_img, (int(img_width * 1.5), int(img_height * 1.6)))
-        self.original_img = self.img.copy()
 
         # Positioning
         self.pos = None

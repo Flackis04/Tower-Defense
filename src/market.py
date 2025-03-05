@@ -5,7 +5,7 @@ import economy
 import other.config  # configuration file for drag-and-drop settings
 import math
 import time
-import path.pathgen  # used to generate the path points
+import path.pathx  # used to generate the path points
 import defenses.barrier as barrier
 import defenses.defense as defense
 import defenses.mortar as mortar
@@ -154,6 +154,10 @@ class Market:
         text_color,
         defense_types,
         defense_list,
+        num_rows,
+        num_cols,
+        vertical_offset,
+        container_size,
         container_spacing, #container_spacing
     ):
         #self.defense_list = defense_list
@@ -173,7 +177,11 @@ class Market:
         self.text_color = text_color
         self.defense_types = defense_types
         self.defense_list = defense_list
-        self.container_spacing = container_spacing
+        self.num_rows = num_rows
+        self.num_cols = num_cols
+        self.vertical_offset = vertical_offset
+        self.container_size = container_size
+        self.container_spacing = self.width-self.num_cols*self.container_size-self.vertical_offset/2
 
         self.market_has_been_opened = False
         self.tab_index = 0
@@ -186,11 +194,6 @@ class Market:
     
         self.market_btn = None  # Initialize as None
         self.make_market_btn()  # ✅ Create the button
-
-        # Containers for the grid layout #eventually expand my markets arguments with similar...
-        self.num_cols = 2
-        self.num_rows = 5
-        self.container_size = 70
 
         # Colors
         self.color = color
@@ -254,7 +257,7 @@ class Market:
 
                 # Pre-calculate the path points using the current screen dimensions.
         screen_width, screen_height = screen.get_size()
-        self.path_points = path.pathgen.generate_path_points(screen_width, screen_height)
+        self.path_points = path.pathx.get_path_points()
 
 
         self.start_time = None
@@ -362,7 +365,7 @@ class Market:
         )
         self.btn_list.append(self.upgrade_btn)
 
-    def make_sell_btn(self, x , y):
+    def make_sell_btn(self, defense, x , y):
         """Creates the sell button."""
         sell_btn_width = 20
         sell_btn_height = sell_btn_width
@@ -383,18 +386,17 @@ class Market:
             hover_color=other.constants.market_btn_hover_color,
             text_color=(255, 255, 255),
             transition_time=0.2,
-            on_click=lambda: self.refund(self),
+            on_click=lambda: self.refund(defense),
             on_hover=None,
             toggle=False
         )
         self.btn_list.append(self.sell_btn)
 
-    def refund(self):
-        print("hi")
-        refund = self.cost // 2
+    def refund(self, defense):
+        refund = defense.cost // 2
         economy.balance += refund
-        if self in self.market.placed_defenses:
-            self.market.placed_defenses.remove(self)
+        if defense in self.placed_defenses:
+            self.placed_defenses.remove(defense)
 
     def draw_defense_ui(self):
         
@@ -550,8 +552,7 @@ class Market:
             if defense not in self.placed_defenses and self.is_active:
                 self.make_info_btn(self.get_container_rect(defense.container_index).x, self.get_container_rect(defense.container_index).y)
                 defense.pos = self.get_container_rect(defense.container_index).center
-            if defense.has_front==True:
-                defense.use_front=True
+            defense.preview=True
             defense.draw()
             self.info_btn.draw(self.screen)
 
@@ -591,7 +592,7 @@ class Market:
                 defense.rotate  
                 defense.angle = 90
                 defense.isrotated = True
-            defense.use_front = False
+            defense.preview = False
 
         # Draw the defense item.
         defense.draw()
@@ -607,11 +608,10 @@ class Market:
         # Calculate the total grid dimensions.
         grid_width = self.num_cols * self.container_size + (self.num_cols + 1) * self.container_spacing
         grid_height = self.num_rows * self.container_size + (self.num_rows + 1) * self.container_spacing
-        vertical_offset = 20 + 10  # Moves the grid 20 pixels lower.
 
         # Center the grid inside self.rect.
         start_x = self.rect.x + (self.rect.width - grid_width) // 2
-        start_y = self.rect.y + (self.rect.height - grid_height) // 2 + vertical_offset
+        start_y = self.rect.y + (self.rect.height - grid_height) // 2 + self.vertical_offset
 
         # Determine the row and column based on the tab index.
         if container_index % 2 == 0:
@@ -789,8 +789,7 @@ class Market:
                         "cost": self.dragging_item.cost, 
                         "scope": self.dragging_item.scope, 
                         "tags": self.dragging_item.tags, 
-                        "has_front": self.dragging_item.has_front, 
-                        "use_front": self.dragging_item.use_front
+                        "preview": self.dragging_item.preview
                     }
                 )
 
@@ -829,7 +828,7 @@ class Market:
                             if defense.been_selected == False:
                                 defense.been_selected = True
                                 self.make_upgrade_btn(x,y)
-                                self.make_sell_btn(x,y)
+                                self.make_sell_btn(defense,x,y)
                             defense.selected = True
                         elif not defense.get_rect().collidepoint(mouse_pos) and defense.selected == True:
                             defense.selected = False
@@ -933,7 +932,11 @@ def make_market(
         text_color=(255, 255, 255),
         defense_types=None,  # Default to None to avoid mutable default arguments
         defense_list=None,   # Same as above
-        container_spacing=13,
+        num_rows = 5,
+        num_cols = 2,
+        vertical_offset = 40,
+        container_size = 70,
+        container_spacing=None,
 
     ):
 
@@ -962,6 +965,10 @@ def make_market(
         text_color,
         defense_types,
         defense_list,
+        num_rows,
+        num_cols,
+        vertical_offset,
+        container_size,
         container_spacing,
     ) 
 

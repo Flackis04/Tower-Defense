@@ -1,5 +1,5 @@
 import pygame
-import path.pathgen as pathgen
+import path.pathx as pathx
 import market
 import enemies.enemies as enemies
 import enemies.spawner as spawner
@@ -11,6 +11,7 @@ import ui.game_over
 import ui.ui_renderer
 import ui.home
 import other.constants as constants
+import numpy as np
 
 def draw_fps(screen, clock, font):
     """Render the FPS counter on the screen."""
@@ -47,21 +48,28 @@ def handle_events(market_inst, btn_inst):
 
     return event_list
 
-
+#smooth transition for menu toggle with screensize dynamics
 
 def main():
     # Initialization
     pygame.init()
-    screen_width, screen_height = 800, 600
-    screen = pygame.display.set_mode((screen_width, screen_height))
-    # Update dimensions in case the display mode changes the size.
-    screen_width, screen_height = screen.get_size()
+
+    development = True
+
+    if development:
+        info = pygame.display.Info()
+        screen_width, screen_height = info.current_w, info.current_h
+        screen = pygame.display.set_mode((screen_width, screen_height), pygame.DOUBLEBUF | pygame.HWSURFACE)
+    else:
+        info = pygame.display.Info()
+        screen_width, screen_height = info.current_w, info.current_h
+        screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.HWSURFACE)
+
     pygame.display.set_caption("Tower Defense")
     clock = pygame.time.Clock()
-    bg_image = pygame.image.load("assets/smooth_noise_bg.png")
+    bg_image = pygame.image.load("assets/bg.png")
 
-    # Path generation
-    path_points = pathgen.generate_path_points(screen_width, screen_height)
+    path_points = pathx.get_path_points()
 
     # Initialize game modules and objects.
     enemy_spawner_inst = spawner.EnemySpawner(screen, path_points)
@@ -87,7 +95,7 @@ def main():
             break
 
         # Limit the framerate and get delta time (in milliseconds).
-        dt_ms = clock.tick(120)
+        dt_ms = clock.tick(60)
 
         # Game state updates.
         # Spawner now only spawns enemies
@@ -109,8 +117,8 @@ def main():
 
         # Rendering.
         screen.blit(bg_image, (0, 0))
+        pathx.draw_path(screen, path_points)
         projectile_inst.draw_projectile(screen)
-        pathgen.draw_path(screen, path_points)
         enemies.draw_enemies(enemies.enemies_list)
         ui.ui_renderer.draw_ui(
             screen, events, market_inst, market_inst.market_btn, balance_display, hp_font, player_hp

@@ -1,5 +1,5 @@
 import pygame
-import path.pathgen as pathgen
+import path.pathx as pathx
 
 enemies_list = []
 
@@ -32,7 +32,7 @@ class Enemy:
         self.color = color if color is not None else Enemy.tier_to_color.get((255, 255, 255))
 
         # Precompute cumulative arc lengths along the path.
-        self.arc_lengths = pathgen.compute_arc_lengths(path_points)
+        self.arc_lengths = pathx.compute_arc_lengths(path_points)
         self.total_length = self.arc_lengths[-1]
 
         # Start at the beginning.
@@ -116,4 +116,4 @@ def draw_enemies(enemies_list):
         enemy.draw()
 
 def get_path(width, height):
-    return pathgen.generate_path_points(width, height)
+    return pathx.generate_path_points(width, height)

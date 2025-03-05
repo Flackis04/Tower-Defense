@@ -29,8 +29,7 @@ class Cannon(defense.Defense):
             "scope": 200,
             "tags": ("default", "aim"),
             "is_composite": True,
-            "has_front": False,  # Cannon has a separate front part
-            "use_front": False,  # Assign the front_img correctly
+            "preview": False,  # Cannon has a separate front part
         }
 
         # Merge defaults with any provided keyword arguments
@@ -48,12 +47,8 @@ class Cannon(defense.Defense):
         self.cost = config["cost"]
         self.scope = config["scope"]
         self.tags = config["tags"]
-        self.has_front = config["has_front"]
-
-        # Update width and height to match the image if they were not overridden
-        self.width, self.height = self.img.get_size()
-
-        self.pos = self.get_rect().center  # Set the cannon's position
+        self.is_composite = config["is_composite"]
+        self.preview = config["preview"]
 
         # Timing variables
         self.delay = 1250

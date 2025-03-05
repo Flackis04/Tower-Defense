@@ -1,5 +1,5 @@
 import pygame
-import path.pathgen
+import path.pathx
 import defenses.barrier as barrier
 import enemies.enemies as enemies
 
@@ -34,7 +34,7 @@ class Reverse(barrier.Barrier):
 
 
     def get_path_limits(self):
-        points = path.pathgen.generate_path_points(800, 600)
+        points = path.pathx.generate_path_points(800, 600)
 
         #adda för y kordinater senare när jag skaffar nya mappar
 

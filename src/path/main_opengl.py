@@ -1,14 +1,14 @@
 import pygame
 import numpy as np
 from scipy.ndimage import distance_transform_edt  # Efficient distance transform
-import pathgen
+import path.pathx as pathx
 
 # Assume screen dimensions, pathpoints, and pathwidth are defined
 screen_width, screen_height = 800, 600
 pathwidth = 20
 D_max = 100  # Maximum distance to influence brightness
 
-pathpoints = pathgen.generate_path_points(screen_width, screen_height, step_size=1, default_radius=50, points_per_segment=250)
+pathpoints = pathx.generate_path_points(screen_width, screen_height, step_size=1, default_radius=50, points_per_segment=250)
 pathpoints_np = np.array(pathpoints)
 
 perlin_rgb = (70,70,70)

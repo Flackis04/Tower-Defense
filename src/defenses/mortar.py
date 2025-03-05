@@ -26,8 +26,7 @@ class Mortar(defenses.defense.Defense):
             "scope": 300,
             "tags": ("default", "aim"),
             "is_composite": False,
-            "has_front": False,
-            "use_front": False,
+            "preview": False,
         }
 
         # Merge defaults with any provided keyword arguments
@@ -45,11 +44,5 @@ class Mortar(defenses.defense.Defense):
         self.cost = config["cost"]
         self.scope = config["scope"]
         self.tags = config["tags"]
-        self.has_front = config["has_front"]
-
-        # Update width and height to match the image
-        self.width, self.height = self.img.get_size()
-
-        # Set up rect using the image size
-        self.rect = self.img.get_rect(center=(self.width // 2, self.height // 2))
-        self.pos = None
+        self.is_composite = config["is_composite"]
+        self.preview = config["preview"]
