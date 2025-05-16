@@ -1,26 +1,23 @@
 import pygame
-import enemies.enemies as enemies
+import enemies.enemies as enemy
 import math
 import economy  # for refunding when selling
 import defenses.defense as defense
 import defenses.projectile
-import pygame
 
 class Cannon(defense.Defense):
     def __init__(self, **kwargs):
-        # Load images first so we can get their sizes
-        self.img = pygame.image.load("assets/cannon/base.png").convert_alpha()  # Main cannon base
-        self.img2 = pygame.image.load("assets/cannon/pipe.png").convert_alpha()  # Cannon pipe (front part)
-        self.img2_original = self.img2.copy()  # Keep original for rotation
+        # Load images for the cannon base and pipe (front part)
+        self.img = pygame.image.load("assets/defenses/cannon/base.png").convert_alpha()  # Main cannon base
+        self.img2 = pygame.image.load("assets/defenses/cannon/pipe.png").convert_alpha()  # Cannon pipe (front part)
+        self.img2_original = self.img2.copy()  # Keep original image for rotation if needed
 
-        # Get image dimensions before calling super()
         img_width, img_height = self.img.get_size()
 
-        # Default values, using the image dimensions
         defaults = {
             "screen": pygame.display.get_surface(),
             "market": None,
-            "enemies_list": enemies.enemies_list,
+            "enemies_list": enemy.enemies_list,
             "width": img_width,  # Default width is the image width
             "height": img_height,  # Default height is the image height
             "hp": 250,
@@ -28,8 +25,10 @@ class Cannon(defense.Defense):
             "cost": 1000,
             "scope": 200,
             "tags": ("default", "aim"),
-            "is_composite": True,
-            "preview": False,  # Cannon has a separate front part
+            "is_composite": True,  # This cannon has both base and pipe
+            "preview": True,  # Preview flag
+            "img": self.img,  # Image for the base part
+            "img2": self.img2,
         }
 
         # Merge defaults with any provided keyword arguments
@@ -50,8 +49,10 @@ class Cannon(defense.Defense):
         self.is_composite = config["is_composite"]
         self.preview = config["preview"]
 
-        # Timing variables
+        # Timing variables for the cannon's firing delay
         self.delay = 1250
         self.start_time = 0
+        self.elapsed_time = 0
 
-        #self.elapsed_time = self.current_time-self.start_time
+        # For any future logic (firing projectiles, etc.)
+        self.projectiles = []

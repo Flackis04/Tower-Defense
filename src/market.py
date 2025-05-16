@@ -251,10 +251,6 @@ class Market:
         # Ghost mode for UI interactions
         self.is_ghost_active = False
 
-        # Load and scale item icon
-        self.item_icon = pygame.image.load("assets/up-arrow.png").convert_alpha()
-        self.item_icon = pygame.transform.scale(self.item_icon, (20, 20))
-
                 # Pre-calculate the path points using the current screen dimensions.
         screen_width, screen_height = screen.get_size()
         self.path_points = path.pathx.get_path_points()
@@ -552,7 +548,6 @@ class Market:
             if defense not in self.placed_defenses and self.is_active:
                 self.make_info_btn(self.get_container_rect(defense.container_index).x, self.get_container_rect(defense.container_index).y)
                 defense.pos = self.get_container_rect(defense.container_index).center
-            defense.preview=True
             defense.draw()
             self.info_btn.draw(self.screen)
 
@@ -562,6 +557,7 @@ class Market:
             if container_rect.collidepoint(event.pos) and self.is_active:
                 if self.focused_btn == self.tab_btns[tab_index]:
                     if economy.balance >= defense.cost:
+                        defense.preview = False
                         self.dragging_item = defense
                     else:
                         dark_surface = pygame.Surface(self.screen.get_size(), pygame.SRCALPHA)
@@ -810,15 +806,19 @@ class Market:
         Draws all placed defenses so they remain visible regardless
         of whether the market menu is open.
         """
-        if len(self.placed_defenses)>0:
+        if self.placed_defenses:
             for defense in self.placed_defenses:
-                if (isinstance(defense, barrier.Barrier) and 
-                    self.is_near_path(defense.pos, tolerance=10) and 
-                    self.get_path_orientation(defense.pos) == "horizontal"):
-                    defense.angle = 90
-                elif "aim" in defense.tags:
-                    defense.aim_at_enemy()  # Call without passing 'self'
-                defense.draw()
+
+                if isinstance(defense, barrier.Barrier):  
+                    if (self.is_near_path(defense.pos, tolerance=10) and 
+                        self.get_path_orientation(defense.pos) == "horizontal"):
+                        defense.angle = 90  # Rotate barrier defenses
+
+                if "aim" in defense.tags and hasattr(defense, "aim_at_enemy"):
+                    defense.aim_at_enemy()  # Ensure the method exists before calling
+
+                defense.draw()  # Ensure drawing is done properly
+
 
                 for event in event_list:
                     if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -857,6 +857,7 @@ class Market:
                     print("Clicked outside market, closing...")  # Debugging
                 else:
                     self.get_container_drag_initiation(event, self.tab_index)
+                    
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.dragging_item:
                     self.place_item(event)
@@ -917,6 +918,8 @@ class Market:
             self.economy_flash_inst.draw()
             self.placement_flash_inst.update()
             self.placement_flash_inst.draw()
+
+            print(self.placed_defenses)
             
 def make_market(
         screen,

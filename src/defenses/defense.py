@@ -6,72 +6,66 @@ import math
 import enemies.enemies as enemies
 import defenses.projectile
 
+import pygame
+
 class Defense:
     local_container_index = 0
+
     def __init__(self, **kwargs):
-            self.screen = kwargs.get("screen", pygame.display.get_surface())
-            self.market = kwargs.get("market", None)
-            self.enemies_list = kwargs.get("enemies_list", [])
-            self.hp = kwargs.get("hp", 250)
-            self.dmg = kwargs.get("dmg", 1)
-            self.cost = kwargs.get("cost", 1000)
-            self.scope = kwargs.get("scope", 400)
-            self.tags = kwargs.get("tags", ())
-            self.is_composite = kwargs.get("is_composite", False)
-            self.preview = kwargs.get("preview", False)
+        self.screen = kwargs.get("screen", pygame.display.get_surface())
+        self.market = kwargs.get("market", None)
+        self.enemies_list = kwargs.get("enemies_list", [])
+        self.hp = kwargs.get("hp", 250)
+        self.dmg = kwargs.get("dmg", 1)
+        self.cost = kwargs.get("cost", 1000)
+        self.scope = kwargs.get("scope", 400)
+        self.tags = kwargs.get("tags", ())
+        self.is_composite = kwargs.get("is_composite", False)
+        self.preview = kwargs.get("preview", True)
 
-            self.been_selected = False
-            self.selected = False
-            self.pos = None
-            self.angle = 0
-            self.scale_factor = 2.5
-            self.preview_scale_factor = 1
-            self.original_img = self.img
-            if self.is_composite:
-                self.original_img2 = self.img2
-            else:
-                self.original_img2 = self.img
+        self.been_selected = False
+        self.selected = False
+        self.pos = kwargs.get("pos", (0, 0))  # Default position
 
-                        # Determine the scale factor for img based on the preview state
-            self.resulting_scale_factor = 32 * self.preview_scale_factor if self.preview else 32 * self.scale_factor
+        self.angle = 0
+        self.S = 2 if self.preview else 3  # Scaling factor
+        self.scale_factor = (38 / 800) * self.S  # Final scaling factor
 
-            # Apply scaling to img
-            self.img = pygame.transform.smoothscale(self.img, (self.resulting_scale_factor, self.resulting_scale_factor))
+        # Load images
+        self.img = kwargs.get("img")
+        self.img2 = kwargs.get("img2") if self.is_composite else None
 
-            # Handle scaling for composite images
-            if self.is_composite:
-                # Scale img2 based on preview state
-                self.img2 = pygame.transform.smoothscale(self.img2, (self.resulting_scale_factor, self.resulting_scale_factor))
-                self.original_img2 = pygame.transform.smoothscale(self.original_img2, (self.resulting_scale_factor, self.resulting_scale_factor))
+        if not self.img:
+            raise ValueError("No image provided for Defense instance.")
 
+        self.original_img = self.img
+        self.original_size = self.original_img.get_size()
 
-            # Set width & height from the image if it exists
-            if hasattr(self, "img") and self.img:
-                self.width, self.height = self.img.get_size()
-            else:
-                self.width, self.height = 150, 150  # Default size
-
-    def get_rect(self, preview=False):
-        """Returns a pygame.Rect centered on the object's position.
-
-        If `preview` is True and `self.front_img` exists, the rect is based on `front_img`,
-        smoothscaled properly. Otherwise, it uses `self.img`.
-        """
-        # Use the object's position, or fallback to a default if not set
-        if self.pos is not None:
-            x, y = self.pos
+        if self.is_composite and self.img2:
+            self.original_img2 = self.img2
+            self.original_size2 = self.original_img2.get_size()
         else:
-            x, y = 1, 3
-            print("WoWWW")
+            self.original_img2 = self.img
+            self.original_size2 = self.original_size
 
-        original_w, original_h = self.original_img.get_size()  # This should be (800, 800)
-        w, h = int(original_w * self.resulting_scale_factor), int(original_h * self.resulting_scale_factor)
+        # Apply scaling
+        self.apply_scaling()
 
-        # Create and return a rect centered on (x, y)
-        return pygame.Rect(x - w // 2, y - h // 2, w, h)
+    def apply_scaling(self):
+        """Scales images based on the computed scale factor."""
+        new_size = (int(self.original_size[0] * self.scale_factor), int(self.original_size[1] * self.scale_factor))
+        self.img = pygame.transform.smoothscale(self.original_img, new_size)
 
+        if self.is_composite and self.img2:
+            new_size2 = (int(self.original_size2[0] * self.scale_factor), int(self.original_size2[1] * self.scale_factor))
+            self.img2 = pygame.transform.smoothscale(self.original_img2, new_size2)
 
+        self.width, self.height = self.img.get_size()  # Update width & height
 
+    def get_rect(self):
+        """Returns a pygame.Rect centered on the object's position."""
+        x, y = self.pos
+        return pygame.Rect(x - self.width // 2, y - self.height // 2, self.width, self.height)
 
     def check_collisions(enemies_list, market_instance, barrier_inst):
         """
@@ -128,8 +122,10 @@ class Defense:
             self.angle = self.get_angle_to(enemy)
             # Rotate the instance-specific pipe image.
             if isinstance(self, defenses.cannon.Cannon): #smooth aim transition
+                new_size = (int(self.original_size[0] * self.scale_factor), int(self.original_size[1] * self.scale_factor))
+                img2_rotated = pygame.transform.smoothscale(self.original_img2, new_size)
                 img2_rotated = pygame.transform.rotate(
-                    self.original_img2, 
+                    img2_rotated, 
                     -(math.degrees(self.angle) + 90)
                 )
                 self.img2 = img2_rotated
@@ -145,30 +141,16 @@ class Defense:
             self.angle = 0
 
     def draw(self):
-        # Get the appropriate image rectangle based on the preview state
-        if self.preview:
-            print("1")
-            # Use front image if preview is True and front_img exists
-            img_rect = self.get_rect(preview=True)  # Get the rect for preview scaling
-            self.screen.blit(self.img, img_rect)  # Blit front_img or img based on preview
-            
-            # If composite, draw the second image as well
-            if self.is_composite:
-                img2_rect = self.img2.get_rect(center=img_rect.center)  # Align with main image
-                self.screen.blit(self.img2, img2_rect)
+        """Draws the defense unit on the screen."""
+        if not self.screen:
+            return
 
-        else:
-            print("2")
-            # If preview is False, display the regular image
-            img_rect = self.get_rect(preview=False)  # Get the rect for regular scaling
-            self.screen.blit(self.img, img_rect)
+        img_rect = self.get_rect()
+        self.screen.blit(self.img, img_rect)
 
-            # If the object is composite, draw the second image as well
-            if self.is_composite:
-                img2_rect = self.img2.get_rect(center=img_rect.center)  # Align with main image
-                self.screen.blit(self.img2, img2_rect)
-
-
+        if self.is_composite and self.img2:
+            img2_rect = self.img2.get_rect(center=img_rect.center)
+            self.screen.blit(self.img2, img2_rect)
 
 #Big ball cannon!
 #vind

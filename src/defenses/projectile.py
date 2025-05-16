@@ -12,7 +12,8 @@ class Projectile:
 
     def fire(self):
         print("Fire!")
-        #self.rect.x += self.speed 
+        #projectile = self.rect
 
     def draw_projectile(self, screen):
         """Draw the projectile (for debugging or effect purposes)."""
+        #pygame.draw.circle(self.rect, "red", (50, 50), 20)

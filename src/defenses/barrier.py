@@ -4,8 +4,8 @@ import enemies.enemies as enemies
 
 class Barrier(defenses.defense.Defense):
     def __init__(self, **kwargs):
-        self.img = pygame.image.load("assets/barrier/barrier.png").convert_alpha()
-        self.front_img = pygame.image.load("assets/barrier/barrier_front.png").convert_alpha()
+        self.img = pygame.image.load("assets/defenses/barrier/barrier.png").convert_alpha()
+        self.front_img = pygame.image.load("assets/defenses/barrier/barrier_front.png").convert_alpha()
 
         img_width, img_height = self.img.get_size()
 
@@ -21,7 +21,8 @@ class Barrier(defenses.defense.Defense):
             "scope": False,
             "tags": ("other",),
             "is_composite": False,
-            "preview": False,
+            "preview": True,
+            "img": self.img,  # Image for the base part
         }
 
         config = {**defaults, **kwargs}

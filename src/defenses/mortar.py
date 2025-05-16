@@ -7,13 +7,11 @@ import enemies.enemies as enemies
 
 class Mortar(defenses.defense.Defense):
     def __init__(self, **kwargs):
-        # Load image first so we can get its size
-        self.img = pygame.image.load("assets/mortar/mortar.png").convert_alpha()
 
-        # Get image dimensions
+        self.img = pygame.image.load("assets/defenses/mortar/mortar.png").convert_alpha()
+
         img_width, img_height = self.img.get_size()
 
-        # Default values, using the image dimensions
         defaults = {
             "screen": pygame.display.get_surface(),
             "market": None,
@@ -26,7 +24,8 @@ class Mortar(defenses.defense.Defense):
             "scope": 300,
             "tags": ("default", "aim"),
             "is_composite": False,
-            "preview": False,
+            "preview": True,
+            "img": self.img,  # Image for the base part
         }
 
         # Merge defaults with any provided keyword arguments
