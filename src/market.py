@@ -1,6 +1,6 @@
-from turtle import onclick
 import pygame
-import other.constants
+from other import helper
+import other.colors
 import economy
 import other.config  # configuration file for drag-and-drop settings
 import math
@@ -193,7 +193,7 @@ class Market:
 
     
         self.market_btn = None  # Initialize as None
-        self.make_market_btn()  # ✅ Create the button
+        self.make_market_btn()  
 
         # Colors
         self.color = color
@@ -324,7 +324,7 @@ class Market:
             text_size=14,
             bold=True,
             icon=None,
-            color=other.constants.tabs_focus_color,
+            color=other.colors.tabs_focus_color,
             hover_color=(120, 120, 255),
             text_color=(255, 255, 255),
             transition_time=0.2,
@@ -351,8 +351,8 @@ class Market:
             text_size=14,
             bold=True,
             icon=None,
-            color=other.constants.market_btn_color,
-            hover_color=other.constants.market_btn_hover_color,
+            color=other.colors.market_btn_color,
+            hover_color=other.colors.market_btn_hover_color,
             text_color=(255, 255, 255),
             transition_time=0.2,
             on_click=lambda: print("Upgrade Clicked"),
@@ -378,8 +378,8 @@ class Market:
             text_size=14,
             bold=True,
             icon=None,
-            color=other.constants.sell_btn_color,
-            hover_color=other.constants.market_btn_hover_color,
+            color=other.colors.sell_btn_color,
+            hover_color=other.colors.market_btn_hover_color,
             text_color=(255, 255, 255),
             transition_time=0.2,
             on_click=lambda: self.refund(defense),
@@ -478,7 +478,7 @@ class Market:
                 text_size=16,
                 bold=False,
                 icon=None,
-                color=other.constants.market_color,
+                color=other.colors.market_color,
                 hover_color=None,
                 text_color=(255, 255, 255),
                 transition_time=None,
@@ -492,9 +492,9 @@ class Market:
 
     
     def make_market_btn(self):
-        margin = 20  # Margin from the edges
-        btn_width = 140
-        btn_height = 70
+        margin = int(min(self.screen_width, self.screen_height) * 0.02)
+        btn_width = int(min(self.screen_width, self.screen_height) * 0.225)
+        btn_height = int(min(self.screen_width, self.screen_height) * 0.1)
 
         xpos = self.screen_width - btn_width - margin  # Align right with margin
         ypos = margin  # Top position with margin
@@ -515,7 +515,7 @@ class Market:
             hover_color=(100, 255, 100),
             text_color=(255, 255, 255),
             transition_time=0.25,
-            on_click=lambda: self.toggle(),  # ✅ Use wrapper function
+            on_click=lambda: self.toggle(),
             on_hover=lambda: print("Hovering over Market Button"),
             toggle=False
         )
@@ -869,9 +869,9 @@ class Market:
                     for btn in self.tab_btns:
                         if btn.rect.collidepoint(event.pos):
                             if self.focused_btn and self.focused_btn != btn:
-                                self.focused_btn.current_color = other.constants.tabs_color
+                                self.focused_btn.current_color = other.colors.tabs_color
                             self.focused_btn = btn
-                            self.focused_btn.current_color = other.constants.tabs_focus_color
+                            self.focused_btn.current_color = other.colors.tabs_focus_color
                             self.tab_index = self.tab_btns.index(btn)
                             break
                 else:
@@ -900,7 +900,7 @@ class Market:
                 for btn in self.tab_btns:
                     btn.draw(self.screen)
                 if self.tab_btns:
-                    self.focused_btn.current_color = other.constants.tabs_focus_color
+                    self.focused_btn.current_color = other.colors.tabs_focus_color
 
                 self.update_pin_button()
 
@@ -928,8 +928,8 @@ def make_market(
         margin=0,
         xpos=None,  # Default to None if not provided
         ypos=0,
-        width=179,
-        height=450,
+        width=helper.get_screen_size(False, True) / 8,
+        height=helper.get_screen_size(True, False) / 6,
         text="Items...",
         color=None,  # Use None or default it to a theme later
         text_color=(255, 255, 255),
@@ -937,8 +937,8 @@ def make_market(
         defense_list=None,   # Same as above
         num_rows = 5,
         num_cols = 2,
-        vertical_offset = 40,
-        container_size = 70,
+        vertical_offset = helper.get_screen_size(False, True) / 37,
+        container_size = helper.get_screen_size(True, False) / 37,
         container_spacing=None,
 
     ):
@@ -948,7 +948,7 @@ def make_market(
 
     # Provide default values if None was passed
     if color is None:
-        color = other.constants.market_color
+        color = other.colors.market_color
     if defense_types is None:
         defense_types = ["default", "special", "other"]
     if defense_list is None:

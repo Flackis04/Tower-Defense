@@ -3,13 +3,13 @@ import ctypes
 import pygame
 import numpy as np
 from scipy.special import comb
+import other.helper as helper
 
 pygame.init()
 # --- Parameters ---
-info = pygame.display.Info()
-screen_width, screen_height = info.current_w, info.current_h
-pathwidth = 35             # Constant path width
+pathwidth = helper.get_screen_size(True, False) / 45
 default_margin = pathwidth / 2.0
+screen_width, screen_height = helper.get_screen_size(False, False)
 
 # --- Helper functions for path visuals (same as your original code) ---
 

@@ -1,9 +1,12 @@
 import pygame
 import path.pathx as pathx
+import other.helper as helper
 
 enemies_list = []
 
 class Enemy:
+
+
     tier_to_color = {
         1: (255, 0, 64),       # red
         2: (64, 0, 255),       # blue
@@ -16,11 +19,11 @@ class Enemy:
     def __init__(self, 
                 screen, 
                 path_points,
-                tier=1,
-                color=None, 
-                radius=15, 
-                speed=75, 
-                reward=10, ):
+                tier,
+                color, 
+                radius,
+                speed, 
+                reward, ):
         
         self.screen = screen
         self.tier = tier

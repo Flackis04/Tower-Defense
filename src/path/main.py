@@ -2,13 +2,15 @@ import pygame
 import path.pathx as pathx
 import pathdebug
 
+global screen_width, screen_height
 
+info = pygame.display.Info()
+screen_width, screen_height = info.current_w, info.current_h
 # Assuming `screen` is your Pygame display surface
 # path_points is the list of points returned from `generate_path_points`
 # width is the desired width for the path polygon (e.g., 10)
 def main():
     pygame.init()
-    screen_width, screen_height = 1920, 1080
     screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN | pygame.DOUBLEBUF | pygame.HWSURFACE)
     clock = pygame.time.Clock()
 
