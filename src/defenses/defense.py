@@ -25,13 +25,13 @@ class Defense:
 
         self.been_selected = False
         self.selected = False
-        self.pos = kwargs.get("pos", (0, 0))  # Default position
+        self.pos = kwargs.get("pos", (0, 0))                    
 
         self.angle = 0
-        self.S = 2 if self.preview else 3  # Scaling factor
-        self.scale_factor = (38 / 800) * self.S  # Final scaling factor
+        self.S = 2 if self.preview else 3                  
+        self.scale_factor = (38 / 800) * self.S                        
 
-        # Load images
+                     
         self.img = kwargs.get("img")
         self.img2 = kwargs.get("img2") if self.is_composite else None
 
@@ -48,7 +48,7 @@ class Defense:
             self.original_img2 = self.img
             self.original_size2 = self.original_size
 
-        # Apply scaling
+                       
         self.apply_scaling()
 
     def apply_scaling(self):
@@ -60,7 +60,7 @@ class Defense:
             new_size2 = (int(self.original_size2[0] * self.scale_factor), int(self.original_size2[1] * self.scale_factor))
             self.img2 = pygame.transform.smoothscale(self.original_img2, new_size2)
 
-        self.width, self.height = self.img.get_size()  # Update width & height
+        self.width, self.height = self.img.get_size()                         
 
     def get_rect(self):
         """Returns a pygame.Rect centered on the object's position."""
@@ -77,7 +77,7 @@ class Defense:
         for enemy in enemies_list:
             enemy_center = (enemy.posx, enemy.posy)
             for defense in market_instance.placed_defenses:
-                # For barriers, use the barrier instance's rect.
+                                                                
                 if defense == barrier_inst:
                     defense_rect = barrier_inst.rect
                     if utils.collision.circle_rect_collision(enemy_center, enemy.radius, defense_rect):
@@ -104,7 +104,7 @@ class Defense:
 
         for enemy in enemies.enemies_list:
             distance = self.get_distance(self.pos, (enemy.posx, enemy.posy))
-            # Now you can use 'distance' as needed, e.g. check if the enemy is in range.
+                                                                                        
 
             if distance < scope_distance:
                 scope_distance = distance
@@ -120,8 +120,8 @@ class Defense:
         enemy = self.get_closest_enemy()
         if enemy and self.pos:
             self.angle = self.get_angle_to(enemy)
-            # Rotate the instance-specific pipe image.
-            if isinstance(self, defenses.cannon.Cannon): #smooth aim transition
+                                                      
+            if isinstance(self, defenses.cannon.Cannon):                       
                 new_size = (int(self.original_size[0] * self.scale_factor), int(self.original_size[1] * self.scale_factor))
                 img2_rotated = pygame.transform.smoothscale(self.original_img2, new_size)
                 img2_rotated = pygame.transform.rotate(
@@ -132,9 +132,9 @@ class Defense:
                 
                 current_time = pygame.time.get_ticks()
                 elapsed_time = current_time - self.start_time
-                if elapsed_time >= self.delay:  # Use >= instead of ==
+                if elapsed_time >= self.delay:                        
                     defenses.projectile.Projectile.fire(self)
-                    self.start_time = current_time  # Optionally reset the timer
+                    self.start_time = current_time                              
 
 
         else:
@@ -152,6 +152,6 @@ class Defense:
             img2_rect = self.img2.get_rect(center=img_rect.center)
             self.screen.blit(self.img2, img2_rect)
 
-#Big ball cannon!
-#vind
-#bank
+                 
+     
+     

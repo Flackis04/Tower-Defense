@@ -26,7 +26,7 @@ def handle_events(market_inst, btn_inst):
         if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_j):
             return None, None
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-            pass #TODO: Add pause menu
+            pass                      
     for btn in market_inst.btn_list:
         btn.handle_event(event_list)
         btn.update()

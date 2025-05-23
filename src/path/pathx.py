@@ -6,12 +6,12 @@ from scipy.special import comb
 import other.helper as helper
 
 pygame.init()
-# --- Parameters ---
+                    
 pathwidth = helper.get_screen_size(True, False) / 45
 default_margin = pathwidth / 2.0
 screen_width, screen_height = helper.get_screen_size(False, False)
 
-# --- Helper functions for path visuals (same as your original code) ---
+                                                                        
 
 def coordinate_factor(pixel_coord, center_coord, half_width, margin):
     if center_coord - half_width <= pixel_coord <= center_coord + half_width:
@@ -39,7 +39,7 @@ def get_path_polygon(points, width):
     
     for i in range(len(points)):
         x, y = points[i]
-        # Compute the tangent direction.
+                                        
         if i == 0:
             dx = points[1][0] - x
             dy = points[1][1] - y
@@ -57,7 +57,7 @@ def get_path_polygon(points, width):
             norm_dx = dx / length
             norm_dy = dy / length
         
-        # Perpendicular (normal) vector.
+                                        
         nx = -norm_dy
         ny = norm_dx
         
@@ -71,7 +71,7 @@ def draw_path(screen, path_points):
     path_polygon = get_path_polygon(path_points, pathwidth)
     pygame.draw.polygon(screen, (45, 45, 45), path_polygon)
 
-# --- Bézier curve functions for the predetermined path ---
+                                                           
 
 def bezier_curve(points, num_points=100):
     """
@@ -102,7 +102,7 @@ def get_path_points():
     path_points = [tuple(point) for point in curve]
     return path_points
 
-# --- Arc length computation and enemy position lookup ---
+                                                          
 
 def compute_arc_lengths(points):
     """
@@ -127,10 +127,10 @@ def get_position_at_distance(path_points, arc_lengths, d):
     elif d >= arc_lengths[-1]:
         return path_points[-1]
     
-    # Find the segment where d lies.
+                                    
     for i in range(len(arc_lengths) - 1):
         if arc_lengths[i] <= d < arc_lengths[i+1]:
-            # Linear interpolation between path_points[i] and path_points[i+1].
+                                                                               
             segment_length = arc_lengths[i+1] - arc_lengths[i]
             f = (d - arc_lengths[i]) / segment_length
             x = path_points[i][0] + f * (path_points[i+1][0] - path_points[i][0])

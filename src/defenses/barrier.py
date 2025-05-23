@@ -22,7 +22,7 @@ class Barrier(defenses.defense.Defense):
             "tags": ("other",),
             "is_composite": False,
             "preview": True,
-            "img": self.img,  # Image for the base part
+            "img": self.img,                           
         }
 
         config = {**defaults, **kwargs}
@@ -40,10 +40,10 @@ class Barrier(defenses.defense.Defense):
         self.is_composite = config["is_composite"]
         self.preview = config["preview"]
 
-        # Ensure front_img is set correctly AFTER Defense init
+                                                              
         self.front_img = self.front_img or pygame.image.load("assets/barrier/barrier_front.png").convert_alpha()
 
-        # Positioning
+                     
         self.pos = None
         self.angle = 0
         self.isrotated = False

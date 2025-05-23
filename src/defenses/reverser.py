@@ -36,7 +36,7 @@ class Reverse(barrier.Barrier):
     def get_path_limits(self):
         points = path.pathx.generate_path_points(800, 600)
 
-        #adda för y kordinater senare när jag skaffar nya mappar
+                                                                
 
         for point in points:
             if point[0] == 0 and self.start_point ==None:

@@ -21,7 +21,7 @@ class Economy_flash:
             current_time = pygame.time.get_ticks()
             elapsed_time = current_time - self.start_time
 
-            # If the duration has passed, deactivate the flash
+                                                              
             if elapsed_time >= self.duration:
                 self.is_active = False
 
@@ -32,10 +32,10 @@ class Economy_flash:
 
             if elapsed < self.duration:
                 alpha = 30 * (self.duration - elapsed) / self.duration
-                overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)  # Use SRCALPHA for transparency
-                overlay.fill((255, 0, 0))  # Fill with red
-                overlay.set_alpha(int(alpha))  # Set the alpha value
-                self.screen.blit(overlay, (0, 0))  # Draw the overlay
+                overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)                                 
+                overlay.fill((255, 0, 0))                 
+                overlay.set_alpha(int(alpha))                       
+                self.screen.blit(overlay, (0, 0))                    
             else:
                 self.is_active = False
 
@@ -45,7 +45,7 @@ class placement_flash:
         self.width, self.height = screen.get_size()
         self.is_active = False
         self.start_time = 0
-        self.fade_duration = 250  # Time to fade to alpha=80
+        self.fade_duration = 250                            
         self.alpha = 0
         self.is_dragging = False
 
@@ -66,7 +66,7 @@ class placement_flash:
             current_time = pygame.time.get_ticks()
             
             if self.is_dragging:
-                # Reset the fade-out timer when dragging resumes.
+                                                                 
                 self.fadeout_start_time = None
                 elapsed_time = current_time - self.start_time
                 if elapsed_time < self.fade_duration:
@@ -79,6 +79,6 @@ class placement_flash:
     def draw(self):
         if self.is_active and self.is_dragging:
             overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-            overlay.fill((255, 0, 0))  # Fill with red
+            overlay.fill((255, 0, 0))                 
             overlay.set_alpha(self.alpha)
             self.screen.blit(overlay, (0, 0))

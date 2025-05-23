@@ -1,7 +1,7 @@
 import pygame
 import market
 import math
-import economy  # for refunding when selling
+import economy                              
 import defenses.defense
 import enemies.enemies as enemies
 
@@ -16,8 +16,8 @@ class Mortar(defenses.defense.Defense):
             "screen": pygame.display.get_surface(),
             "market": None,
             "enemies_list": enemies.enemies_list,
-            "width": img_width,  # Use image width
-            "height": img_height,  # Use image height
+            "width": img_width,                   
+            "height": img_height,                    
             "hp": 300,
             "dmg": 3,
             "cost": 5000,
@@ -25,16 +25,16 @@ class Mortar(defenses.defense.Defense):
             "tags": ("default", "aim"),
             "is_composite": False,
             "preview": True,
-            "img": self.img,  # Image for the base part
+            "img": self.img,                           
         }
 
-        # Merge defaults with any provided keyword arguments
+                                                            
         config = {**defaults, **kwargs}
 
-        # Initialize the parent class
+                                     
         super().__init__(**config)
 
-        # Assign instance variables
+                                   
         self.screen = config["screen"]
         self.market = config["market"]
         self.enemies_list = config["enemies_list"]
